@@ -1,0 +1,34 @@
+[
+  {
+    "prompt": "Describe what is happening in this video.",
+    "response": "In the video, a red ball is seen rolling on a wooden floor. The ball moves from the left side of the frame towards the right, eventually coming to a stop. The background is a plain white wall, and the lighting creates a soft shadow of the ball on the floor. The video captures the simple yet elegant motion of the ball as it travels across the floor.",
+    "mentions_motion": true,
+    "keywords_found": [
+      "move",
+      "motion",
+      "left",
+      "right",
+      "across",
+      "ball",
+      "travels",
+      "from",
+      "to"
+    ]
+  },
+  {
+    "prompt": "What objects are in this video and what are they doing?",
+    "response": "The video shows a red ball rolling on a wooden floor.",
+    "mentions_motion": true,
+    "keywords_found": [
+      "ball"
+    ]
+  },
+  {
+    "prompt": "Describe the motion you see in this video.",
+    "response": "The video shows a red ball rolling on a wooden floor.",
+    "mentions_motion": true,
+    "keywords_found": [
+      "ball"
+    ]
+  }
+]
