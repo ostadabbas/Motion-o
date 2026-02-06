@@ -6,10 +6,22 @@ Training vision-language models to reason about video motion through verifiable,
 
 **STATUS**: The PLM-Video-Human RDCap dataset has **INCORRECT masklet_id mappings**. The `masklet_id` field in RDCap does NOT correspond to the objects described in `dense_captions`. SA-V masklets are tracking wrong objects (furniture, background, etc.) instead of people mentioned in captions.
 
+**Data Status:**
+- ✅ SA-V videos downloaded: ~50,232 videos
+- ✅ SA-V annotations: ~98,315 JSON files (_manual.json and _auto.json)
+- ❌ RDCap masklet_id mappings: INCORRECT
+
 **Examples found**:
-- `sav_015834`: Caption says "person walking" but masklet tracks walkway shadow/grate
+- `sav_015834`: Caption says "person walking" but masklet_id=0 tracks walkway shadow/grate
 - `sav_003127`: Caption says "man walking into mall" but masklet_id=1 is EMPTY
 - `sav_017599`: Caption says "boy enters frame" but all masklets are EMPTY at described timestamps
+
+**Root Cause:** The `masklet_id` field in RDCap does not correctly index the SA-V masklets. For `sav_015834`:
+- RDCap says use `masklet_id=0`
+- SA-V JSON has `masklet_id: [0, 1, 2, 3]` (4 tracked objects)
+- Object 0 = walkway patch (WRONG!)
+- Object 1 = grate on walkway (WRONG!)
+- The actual person walking is NOT being tracked by any masklet
 
 **Impact**: Cannot train on this dataset without fixing masklet associations.
 
@@ -17,6 +29,8 @@ Training vision-language models to reason about video motion through verifiable,
 1. Implement heuristic search across ALL masklets per frame (find largest moving person-shaped object)
 2. Report issue to Meta/Facebook and wait for fix
 3. Switch to different dataset (e.g., pure SA-V with auto-generated captions)
+
+**See**: `scripts/debug_all_masklets.py` to visualize ALL masklets and verify the mismatch
 
 ## Overview
 
@@ -87,10 +101,22 @@ The RDCap annotations reference videos from the Segment Anything Video (SA-V) da
 #    ├── sav_000001.mp4
 #    ├── sav_000001_manual.json  (masklet annotations)
 #    ├── sav_000001_auto.json
-#    └── ... (more videos)
+#    └── ... (~50K videos + ~98K JSON files)
 
 # Or use download script (requires authentication):
 bash scripts/download_sav_videos.sh
+```
+
+**Verify Download:**
+```bash
+# Should show ~50K videos
+find /mnt/data/plm_stc/raw/sa-v/ -name "*.mp4" | wc -l
+
+# Should show ~98K JSON files
+find /mnt/data/plm_stc/raw/sa-v/ -name "*.json" | wc -l
+
+# Check specific video exists
+ls -lh /mnt/data/plm_stc/raw/sa-v/sav_015834*
 ```
 
 ### Step 3: Convert RDCap + SA-V to Training Format
