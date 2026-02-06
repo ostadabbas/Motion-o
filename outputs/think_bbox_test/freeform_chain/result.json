@@ -1,0 +1,108 @@
+{
+  "strategy": "freeform_chain",
+  "question": "Describe the motion trajectory of the red ball",
+  "response": "Step 1: [0.0-1.0s] Ball starts on left\n  Think: (150,400),(250,600)\n  Predict: (160,420),(240,580)\n  Motion: Starting position, stationary\n\nStep 2: [1.0-2.0s] Ball moves right\n  Think: (500,390),(600,590)\n  Predict: (510,410),(590,570)\n  Motion: Moved 350 units right, velocity ~350 units/s\n\nEnd with: The red ball moves right from its starting position on the left side of the floor, reaching a position slightly to the right of the center of the floor, and then moves further right, reaching the right edge of the floor.",
+  "answer": "",
+  "steps": [
+    {
+      "step_num": 1,
+      "time_start": 0.0,
+      "time_end": 1.0,
+      "think_bboxes": [
+        {
+          "x1": 192.0,
+          "y1": 288.0,
+          "x2": 320.0,
+          "y2": 432.0,
+          "cx": 256.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 204.8,
+          "y1": 302.4,
+          "x2": 307.2,
+          "y2": 417.59999999999997,
+          "cx": 256.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Starting position, stationary",
+      "description": "Ball starts on left"
+    },
+    {
+      "step_num": 2,
+      "time_start": 1.0,
+      "time_end": 2.0,
+      "think_bboxes": [
+        {
+          "x1": 640.0,
+          "y1": 280.8,
+          "x2": 768.0,
+          "y2": 424.79999999999995,
+          "cx": 704.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 652.8,
+          "y1": 295.2,
+          "x2": 755.1999999999999,
+          "y2": 410.4,
+          "cx": 704.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 350 units right, velocity ~350 units/s",
+      "description": "Ball moves right"
+    }
+  ],
+  "analysis": {
+    "pred_variation": {
+      "count": 2,
+      "all_identical": false,
+      "max_displacement": 448.0578534073474,
+      "total_displacement": 448.0578534073474,
+      "x_range": 448.0,
+      "y_range": 7.2000000000000455,
+      "centers": [
+        [
+          256.0,
+          360.0
+        ],
+        [
+          704.0,
+          352.8
+        ]
+      ]
+    },
+    "think_variation": {
+      "count": 2,
+      "all_identical": false,
+      "max_displacement": 448.0578534073474,
+      "total_displacement": 448.0578534073474,
+      "x_range": 448.0,
+      "y_range": 7.2000000000000455,
+      "centers": [
+        [
+          256.0,
+          360.0
+        ],
+        [
+          704.0,
+          352.8
+        ]
+      ]
+    },
+    "think_to_pred_shifts": [
+      0.0,
+      0.0
+    ]
+  }
+}

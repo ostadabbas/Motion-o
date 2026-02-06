@@ -52,51 +52,59 @@ class MotionGRPODataset(Dataset):
     def __len__(self):
         return len(self.dataset)
     
-    def _build_chain_prompt(self, question: str) -> str:
+    def _build_chain_prompt(self, question: str, num_frames: int, frame_times: List[float]) -> str:
         """
-        Build prompt requesting spatio-temporal evidence chain.
+        Build Think-then-Predict prompt for spatio-temporal reasoning.
         
-        Enhanced prompt following PyImageSearch best practices:
-        1. Task-Specific Instruction (Analyze, Detect)
-        2. Object Specification with attributes
-        3. Output Requirements (JSON format with bbox_2d)
-        4. Structured reasoning format
+        Uses the format proven to work in test_think_bbox_inference.py:
+        - Explicit frame listing
+        - Think: (x1,y1),(x2,y2) - rough estimate
+        - Predict: (x1,y1),(x2,y2) - refined bbox
+        - Motion: quantifiable descriptors
         
         Args:
             question: Motion-related question
+            num_frames: Number of frames shown
+            frame_times: List of frame timestamps in seconds
         
         Returns:
             Formatted prompt string
         """
-        prompt = f"""{self.system_prompt}
+        # Build frame time listing
+        frame_list = "\n".join([
+            f"  Frame {i+1} at t={t:.2f}s" 
+            for i, t in enumerate(frame_times)
+        ])
+        
+        prompt = f"""{question}
 
-**Task**: Analyze the video motion to answer this question: {question}
+You are shown {num_frames} frames from the video at these times:
+{frame_list}
 
-**Instructions**: Detect all relevant objects at each key moment and track their motion across frames.
+For EACH frame, locate relevant objects and provide:
 
-For each evidence step, provide:
-1. **Time Interval**: [start_time–end_time] in seconds (e.g., [2.1–3.4])
-2. **Object Detection**: Detect objects and return bounding boxes in JSON format:
-   ```json
-   {{"bbox_2d": [x1, y1, x2, y2], "label": "object_name"}}
-   ```
-   Where coordinates are normalized between 0 and 1.
-3. **Motion Description**: Describe how the object moved (direction, speed, displacement)
-4. **What Happened**: Explain the event
+Step N: [time] Description
+  Think: (x1,y1),(x2,y2) - rough estimate
+  Predict: (x1,y1),(x2,y2) - refined bbox
+  Motion: how the object moved
 
-**Output Format**:
-Step 1: [t_s–t_e]
-Objects detected:
-```json
-[{{"bbox_2d": [x1, y1, x2, y2], "label": "object1"}}, {{"bbox_2d": [x1, y1, x2, y2], "label": "object2"}}]
-```
-Motion: [centroid displacement, velocity, direction]
-Description: [what happened]
+Coordinates use 0-1000 scale (0=left/top, 1000=right/bottom).
 
-Step 2: [t_s–t_e]
-...
+Example format:
+Step 1: [0.0s] Ball on left side
+  Think: (150,400),(250,600)
+  Predict: (160,420),(240,580)
+  Motion: Starting position
 
-**Final Answer**: [your concise answer based on the motion evidence]"""
+Step 2: [1.0s] Ball moved right
+  Think: (450,390),(550,590)
+  Predict: (460,410),(540,570)
+  Motion: Moved 300 units right, velocity 150 units/s
+
+CRITICAL: Each step must have DIFFERENT coordinates showing actual object position in that frame.
+Do NOT copy coordinates between steps!
+
+After all steps: Answer: your final answer"""
         
         return prompt
     
@@ -122,12 +130,17 @@ Step 2: [t_s–t_e]
         
         # Convert frames to PIL Images
         images: List[Image.Image] = []
+        original_width, original_height = None, None  # Capture original dimensions
+        
         if frames:
             for frame_data in frames[:self.max_frames]:
                 if isinstance(frame_data, dict):
                     # Frame stored as dict with 'image' key
                     img_array = frame_data.get("image")
                 elif isinstance(frame_data, np.ndarray):
+                    img_array = frame_data
+                elif isinstance(frame_data, list):
+                    # Frame stored as nested list (HF Datasets serialization)
                     img_array = frame_data
                 elif isinstance(frame_data, Image.Image):
                     images.append(frame_data)
@@ -143,13 +156,32 @@ Step 2: [t_s–t_e]
                         img_array = img_array.astype(np.uint8)
                     
                     if len(img_array.shape) == 3:
+                        # Capture original dimensions BEFORE resize (from first frame)
+                        if original_width is None:
+                            original_height, original_width = img_array.shape[:2]
+                        
                         img = Image.fromarray(img_array)
                         # Resize to consistent size for Qwen-VL
                         img = img.resize((448, 448), Image.Resampling.LANCZOS)
                         images.append(img)
         
-        # Build chain prompt
-        user_prompt = self._build_chain_prompt(question)
+        # Build chain prompt with frame timing info
+        num_frames = len(images)
+        # Extract frame times from gt_evidence_steps or generate uniform spacing
+        frame_times = []
+        if gt_evidence_steps and len(gt_evidence_steps) > 0:
+            # Use ground truth step times
+            for i in range(num_frames):
+                if i < len(gt_evidence_steps):
+                    frame_times.append(gt_evidence_steps[i].get("t_s", i * 1.0))
+                else:
+                    frame_times.append(i * 1.0)
+        else:
+            # Uniform spacing (assume 8s video with uniform frames)
+            video_duration = 8.0
+            frame_times = [i * video_duration / max(num_frames - 1, 1) for i in range(num_frames)]
+        
+        user_prompt = self._build_chain_prompt(question, num_frames, frame_times)
         
         # Build messages format (TRL standard format)
         # Format: [{"role": "user", "content": [{"type": "image", ...}, {"type": "text", ...}]}]
@@ -166,6 +198,11 @@ Step 2: [t_s–t_e]
         # Build messages (single user message)
         messages = [{"role": "user", "content": user_content_list}]
         
+        # Get video dimensions from original frames (BEFORE resize)
+        img_width, img_height = 1280, 720  # Default fallback
+        if original_width is not None and original_height is not None:
+            img_width, img_height = original_width, original_height
+        
         # Return in TRL GRPO format
         return {
             "prompt": messages,  # Messages format for TRL
@@ -174,6 +211,8 @@ Step 2: [t_s–t_e]
             "question": question,  # For logging
             "answer": answer,  # For reward computation
             "images": images,  # For compatibility
+            "img_width": img_width,  # For coordinate conversion in rewards
+            "img_height": img_height,  # For coordinate conversion in rewards
         }
 
 

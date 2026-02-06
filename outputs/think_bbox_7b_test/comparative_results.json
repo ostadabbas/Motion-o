@@ -1,0 +1,312 @@
+{
+  "explicit_binding": {
+    "strategy": "explicit_binding",
+    "question": "Describe the motion trajectory of the red ball",
+    "response": "Step 1: [0.0s] Ball not present\n  Think: (N/A,N/A)\n  Predict: (N/A,N/A)\n  Motion: Starting position\n\nStep 2: [2.62s] Ball appears in the center\n  Think: (500,300),(600,400)\n  Predict: (510,320),(590,420)\n  Motion: Appears in the center\n\nStep 3: [5.29s] Ball moves slightly to the right\n  Think: (550,300),(650,400)\n  Predict: (560,320),(640,420)\n  Motion: Moves 50 units to the right\n\nStep 4: [7.96s] Ball disappears\n  Think: (N/A,N/A)\n  Predict: (N/A,N/A)\n  Motion: Disappears from view",
+    "answer": "",
+    "steps": [
+      {
+        "step_num": 1,
+        "time_start": null,
+        "time_end": null,
+        "think_bboxes": [],
+        "pred_bboxes": [],
+        "motion_text": "Starting position",
+        "description": "[0.0s] Ball not present"
+      },
+      {
+        "step_num": 2,
+        "time_start": null,
+        "time_end": null,
+        "think_bboxes": [
+          {
+            "x1": 640.0,
+            "y1": 216.0,
+            "x2": 768.0,
+            "y2": 288.0,
+            "cx": 704.0,
+            "cy": 252.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "pred_bboxes": [
+          {
+            "x1": 652.8,
+            "y1": 230.4,
+            "x2": 755.1999999999999,
+            "y2": 302.4,
+            "cx": 704.0,
+            "cy": 266.4,
+            "scale": "qwen_1000"
+          }
+        ],
+        "motion_text": "Appears in the center",
+        "description": "[2.62s] Ball appears in the center"
+      },
+      {
+        "step_num": 3,
+        "time_start": null,
+        "time_end": null,
+        "think_bboxes": [
+          {
+            "x1": 704.0,
+            "y1": 216.0,
+            "x2": 832.0,
+            "y2": 288.0,
+            "cx": 768.0,
+            "cy": 252.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "pred_bboxes": [
+          {
+            "x1": 716.8000000000001,
+            "y1": 230.4,
+            "x2": 819.2,
+            "y2": 302.4,
+            "cx": 768.0,
+            "cy": 266.4,
+            "scale": "qwen_1000"
+          }
+        ],
+        "motion_text": "Moves 50 units to the right",
+        "description": "[5.29s] Ball moves slightly to the right"
+      },
+      {
+        "step_num": 4,
+        "time_start": null,
+        "time_end": null,
+        "think_bboxes": [],
+        "pred_bboxes": [],
+        "motion_text": "Disappears from view",
+        "description": "[7.96s] Ball disappears"
+      }
+    ],
+    "analysis": {
+      "pred_variation": {
+        "count": 2,
+        "all_identical": false,
+        "max_displacement": 64.0,
+        "total_displacement": 64.0,
+        "x_range": 64.0,
+        "y_range": 0.0,
+        "centers": [
+          [
+            704.0,
+            266.4
+          ],
+          [
+            768.0,
+            266.4
+          ]
+        ]
+      },
+      "think_variation": {
+        "count": 2,
+        "all_identical": false,
+        "max_displacement": 64.0,
+        "total_displacement": 64.0,
+        "x_range": 64.0,
+        "y_range": 0.0,
+        "centers": [
+          [
+            704.0,
+            252.0
+          ],
+          [
+            768.0,
+            252.0
+          ]
+        ]
+      },
+      "think_to_pred_shifts": [
+        14.4,
+        14.4
+      ]
+    }
+  },
+  "freeform_chain": {
+    "strategy": "freeform_chain",
+    "question": "Describe the motion trajectory of the red ball",
+    "response": "Step 1: [0.0-1.0s] Ball starts in the center\n  Think: (500,350),(600,450)\n  Predict: (510,360),(590,440)\n  Motion: Starting position, stationary\n\nStep 2: [1.0-2.0s] Ball moves right\n  Think: (600,350),(700,450)\n  Predict: (610,360),(690,440)\n  Motion: Moved 100 units right, velocity ~100 units/s\n\nStep 3: [2.0-3.0s] Ball stops\n  Think: (600,350),(700,450)\n  Predict: (610,360),(690,440)\n  Motion: Stationary\n\nStep 4: [3.0-4.0s] Ball moves left\n  Think: (500,350),(600,450)\n  Predict: (510,360),(590,440)\n  Motion: Moved 100 units left, velocity ~100 units/s\n\nAnswer: The red ball initially starts in the center, then moves to the right, stops, and finally moves back to the left.",
+    "answer": "The red ball initially starts in the center, then moves to the right, stops, and finally moves back to the left.",
+    "steps": [
+      {
+        "step_num": 1,
+        "time_start": 0.0,
+        "time_end": 1.0,
+        "think_bboxes": [
+          {
+            "x1": 640.0,
+            "y1": 251.99999999999997,
+            "x2": 768.0,
+            "y2": 324.0,
+            "cx": 704.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "pred_bboxes": [
+          {
+            "x1": 652.8,
+            "y1": 259.2,
+            "x2": 755.1999999999999,
+            "y2": 316.8,
+            "cx": 704.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "motion_text": "Starting position, stationary",
+        "description": "Ball starts in the center"
+      },
+      {
+        "step_num": 2,
+        "time_start": 1.0,
+        "time_end": 2.0,
+        "think_bboxes": [
+          {
+            "x1": 768.0,
+            "y1": 251.99999999999997,
+            "x2": 896.0,
+            "y2": 324.0,
+            "cx": 832.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "pred_bboxes": [
+          {
+            "x1": 780.8,
+            "y1": 259.2,
+            "x2": 883.1999999999999,
+            "y2": 316.8,
+            "cx": 832.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "motion_text": "Moved 100 units right, velocity ~100 units/s",
+        "description": "Ball moves right"
+      },
+      {
+        "step_num": 3,
+        "time_start": 2.0,
+        "time_end": 3.0,
+        "think_bboxes": [
+          {
+            "x1": 768.0,
+            "y1": 251.99999999999997,
+            "x2": 896.0,
+            "y2": 324.0,
+            "cx": 832.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "pred_bboxes": [
+          {
+            "x1": 780.8,
+            "y1": 259.2,
+            "x2": 883.1999999999999,
+            "y2": 316.8,
+            "cx": 832.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "motion_text": "Stationary",
+        "description": "Ball stops"
+      },
+      {
+        "step_num": 4,
+        "time_start": 3.0,
+        "time_end": 4.0,
+        "think_bboxes": [
+          {
+            "x1": 640.0,
+            "y1": 251.99999999999997,
+            "x2": 768.0,
+            "y2": 324.0,
+            "cx": 704.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "pred_bboxes": [
+          {
+            "x1": 652.8,
+            "y1": 259.2,
+            "x2": 755.1999999999999,
+            "y2": 316.8,
+            "cx": 704.0,
+            "cy": 288.0,
+            "scale": "qwen_1000"
+          }
+        ],
+        "motion_text": "Moved 100 units left, velocity ~100 units/s",
+        "description": "Ball moves left"
+      }
+    ],
+    "analysis": {
+      "pred_variation": {
+        "count": 4,
+        "all_identical": false,
+        "max_displacement": 128.0,
+        "total_displacement": 256.0,
+        "x_range": 128.0,
+        "y_range": 0.0,
+        "centers": [
+          [
+            704.0,
+            288.0
+          ],
+          [
+            832.0,
+            288.0
+          ],
+          [
+            832.0,
+            288.0
+          ],
+          [
+            704.0,
+            288.0
+          ]
+        ]
+      },
+      "think_variation": {
+        "count": 4,
+        "all_identical": false,
+        "max_displacement": 128.0,
+        "total_displacement": 256.0,
+        "x_range": 128.0,
+        "y_range": 0.0,
+        "centers": [
+          [
+            704.0,
+            288.0
+          ],
+          [
+            832.0,
+            288.0
+          ],
+          [
+            832.0,
+            288.0
+          ],
+          [
+            704.0,
+            288.0
+          ]
+        ]
+      },
+      "think_to_pred_shifts": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

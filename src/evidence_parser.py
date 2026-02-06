@@ -25,6 +25,17 @@ class EvidenceStep:
             self.object_names = []
 
 
+@dataclass
+class ThinkPredictStep:
+    """Evidence step with Think-then-Predict bboxes for GRPO training."""
+    step_num: int
+    time: Optional[float]
+    description: str
+    think_bboxes: List[List[int]]  # Rough estimates
+    pred_bboxes: List[List[int]]   # Refined predictions
+    motion_text: str
+
+
 def extract_bboxes_from_text(text: str, img_width: int = 1280, img_height: int = 720) -> List[List[int]]:
     """
     Extract bboxes from various formats that Qwen models output.
@@ -461,3 +472,87 @@ def extract_final_answer(text: str) -> str:
         return sentences[-1].strip()
     
     return text.strip()
+
+
+def parse_think_predict_chain(text: str, img_width: int = 1280, img_height: int = 720) -> List[ThinkPredictStep]:
+    """
+    Parse Think-Predict format from model output.
+    
+    Format:
+        Step 1: [0.0s] Description
+          Think: (x1,y1),(x2,y2)
+          Predict: (x1,y1),(x2,y2)
+          Motion: motion description
+    
+    Coordinates are on 0-1000 scale, converted to pixels.
+    
+    Returns:
+        List of ThinkPredictStep objects with parsed bboxes
+    """
+    steps = []
+    
+    # Split by "Step N:"
+    step_pattern = r'Step\s+(\d+):\s*\[([^\]]+)\]\s*([^\n]+)'
+    step_matches = list(re.finditer(step_pattern, text, re.IGNORECASE))
+    
+    for i, match in enumerate(step_matches):
+        step_num = int(match.group(1))
+        time_str = match.group(2).strip()
+        description = match.group(3).strip()
+        
+        # Parse time
+        time = None
+        try:
+            time = float(time_str.replace('s', ''))
+        except:
+            pass
+        
+        # Find content for this step (until next step or end)
+        start_pos = match.end()
+        if i + 1 < len(step_matches):
+            end_pos = step_matches[i + 1].start()
+        else:
+            end_pos = len(text)
+        step_content = text[start_pos:end_pos]
+        
+        # Extract Think bboxes (0-1000 scale)
+        think_bboxes = []
+        think_pattern = r'Think:\s*\((\d+),(\d+)\),\((\d+),(\d+)\)'
+        for bbox_match in re.finditer(think_pattern, step_content):
+            x1, y1, x2, y2 = map(int, bbox_match.groups())
+            # Convert from 0-1000 scale to pixels
+            think_bboxes.append([
+                int(x1 * img_width / 1000),
+                int(y1 * img_height / 1000),
+                int(x2 * img_width / 1000),
+                int(y2 * img_height / 1000)
+            ])
+        
+        # Extract Predict bboxes (0-1000 scale)
+        pred_bboxes = []
+        pred_pattern = r'Predict:\s*\((\d+),(\d+)\),\((\d+),(\d+)\)'
+        for bbox_match in re.finditer(pred_pattern, step_content):
+            x1, y1, x2, y2 = map(int, bbox_match.groups())
+            # Convert from 0-1000 scale to pixels
+            pred_bboxes.append([
+                int(x1 * img_width / 1000),
+                int(y1 * img_height / 1000),
+                int(x2 * img_width / 1000),
+                int(y2 * img_height / 1000)
+            ])
+        
+        # Extract motion text
+        motion_pattern = r'Motion:\s*([^\n]+)'
+        motion_match = re.search(motion_pattern, step_content)
+        motion_text = motion_match.group(1).strip() if motion_match else ""
+        
+        steps.append(ThinkPredictStep(
+            step_num=step_num,
+            time=time,
+            description=description,
+            think_bboxes=think_bboxes,
+            pred_bboxes=pred_bboxes,
+            motion_text=motion_text
+        ))
+    
+    return steps

@@ -1,0 +1,336 @@
+{
+  "strategy": "explicit_binding",
+  "question": "Describe the motion trajectory of the red ball",
+  "response": "Step 1: [0.0s] Ball on left side\n  Think: (150,400),(250,600)\n  Predict: (160,420),(240,580)\n  Motion: Starting position\n\nStep 2: [1.0s] Ball moved right\n  Think: (450,390),(550,590)\n  Predict: (460,410),(540,570)\n  Motion: Moved 300 units right\n\nStep 3: [2.0s] Ball moved up\n  Think: (500,400),(600,600)\n  Predict: (510,420),(590,580)\n  Motion: Moved 300 units up\n\nStep 4: [3.0s] Ball moved down\n  Think: (650,390),(750,590)\n  Predict: (660,410),(740,570)\n  Motion: Moved 300 units down\n\nStep 5: [4.0s] Ball moved left\n  Think: (100,400),(200,600)\n  Predict: (110,420),(200,580)\n  Motion: Moved 200 units left\n\nStep 6: [5.0s] Ball moved up\n  Think: (550,400),(650,600)\n  Predict: (560,420),(640,580)\n  Motion: Moved 300 units up\n\nStep 7: [6.0s] Ball moved down\n  Think: (700,390),(800,590)\n  Predict: (710,410),(800,570)\n  Motion: Moved 300 units down\n\nStep 8: [7.0s] Ball moved right\n  Think: (120,400),(220,600)\n  Predict: (130,420),(220,580)\n  Motion: Moved 200 units right\n\nFinal Answer:",
+  "answer": "",
+  "steps": [
+    {
+      "step_num": 1,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 192.0,
+          "y1": 288.0,
+          "x2": 320.0,
+          "y2": 432.0,
+          "cx": 256.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 204.8,
+          "y1": 302.4,
+          "x2": 307.2,
+          "y2": 417.59999999999997,
+          "cx": 256.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Starting position",
+      "description": "[0.0s] Ball on left side"
+    },
+    {
+      "step_num": 2,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 576.0,
+          "y1": 280.8,
+          "x2": 704.0,
+          "y2": 424.79999999999995,
+          "cx": 640.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 588.8000000000001,
+          "y1": 295.2,
+          "x2": 691.2,
+          "y2": 410.4,
+          "cx": 640.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 300 units right",
+      "description": "[1.0s] Ball moved right"
+    },
+    {
+      "step_num": 3,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 640.0,
+          "y1": 288.0,
+          "x2": 768.0,
+          "y2": 432.0,
+          "cx": 704.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 652.8,
+          "y1": 302.4,
+          "x2": 755.1999999999999,
+          "y2": 417.59999999999997,
+          "cx": 704.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 300 units up",
+      "description": "[2.0s] Ball moved up"
+    },
+    {
+      "step_num": 4,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 832.0,
+          "y1": 280.8,
+          "x2": 960.0,
+          "y2": 424.79999999999995,
+          "cx": 896.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 844.8000000000001,
+          "y1": 295.2,
+          "x2": 947.2,
+          "y2": 410.4,
+          "cx": 896.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 300 units down",
+      "description": "[3.0s] Ball moved down"
+    },
+    {
+      "step_num": 5,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 128.0,
+          "y1": 288.0,
+          "x2": 256.0,
+          "y2": 432.0,
+          "cx": 192.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 140.8,
+          "y1": 302.4,
+          "x2": 256.0,
+          "y2": 417.59999999999997,
+          "cx": 198.4,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 200 units left",
+      "description": "[4.0s] Ball moved left"
+    },
+    {
+      "step_num": 6,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 704.0,
+          "y1": 288.0,
+          "x2": 832.0,
+          "y2": 432.0,
+          "cx": 768.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 716.8000000000001,
+          "y1": 302.4,
+          "x2": 819.2,
+          "y2": 417.59999999999997,
+          "cx": 768.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 300 units up",
+      "description": "[5.0s] Ball moved up"
+    },
+    {
+      "step_num": 7,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 896.0,
+          "y1": 280.8,
+          "x2": 1024.0,
+          "y2": 424.79999999999995,
+          "cx": 960.0,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 908.8,
+          "y1": 295.2,
+          "x2": 1024.0,
+          "y2": 410.4,
+          "cx": 966.4,
+          "cy": 352.79999999999995,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 300 units down",
+      "description": "[6.0s] Ball moved down"
+    },
+    {
+      "step_num": 8,
+      "time_start": null,
+      "time_end": null,
+      "think_bboxes": [
+        {
+          "x1": 153.6,
+          "y1": 288.0,
+          "x2": 281.6,
+          "y2": 432.0,
+          "cx": 217.60000000000002,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "pred_bboxes": [
+        {
+          "x1": 166.4,
+          "y1": 302.4,
+          "x2": 281.6,
+          "y2": 417.59999999999997,
+          "cx": 224.0,
+          "cy": 360.0,
+          "scale": "qwen_1000"
+        }
+      ],
+      "motion_text": "Moved 200 units right",
+      "description": "[7.0s] Ball moved right"
+    }
+  ],
+  "analysis": {
+    "pred_variation": {
+      "count": 8,
+      "all_identical": false,
+      "max_displacement": 742.4349129721743,
+      "total_displacement": 2848.8088433621806,
+      "x_range": 768.0,
+      "y_range": 7.2000000000000455,
+      "centers": [
+        [
+          256.0,
+          360.0
+        ],
+        [
+          640.0,
+          352.8
+        ],
+        [
+          704.0,
+          360.0
+        ],
+        [
+          896.0,
+          352.8
+        ],
+        [
+          198.4,
+          360.0
+        ],
+        [
+          768.0,
+          360.0
+        ],
+        [
+          966.4,
+          352.8
+        ],
+        [
+          224.0,
+          360.0
+        ]
+      ]
+    },
+    "think_variation": {
+      "count": 8,
+      "all_identical": false,
+      "max_displacement": 742.4349129721743,
+      "total_displacement": 2855.2128560047595,
+      "x_range": 768.0,
+      "y_range": 7.2000000000000455,
+      "centers": [
+        [
+          256.0,
+          360.0
+        ],
+        [
+          640.0,
+          352.8
+        ],
+        [
+          704.0,
+          360.0
+        ],
+        [
+          896.0,
+          352.8
+        ],
+        [
+          192.0,
+          360.0
+        ],
+        [
+          768.0,
+          360.0
+        ],
+        [
+          960.0,
+          352.8
+        ],
+        [
+          217.6,
+          360.0
+        ]
+      ]
+    },
+    "think_to_pred_shifts": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      6.4,
+      0.0,
+      6.4,
+      6.4
+    ]
+  }
+}

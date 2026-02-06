@@ -6,12 +6,13 @@ Computes multi-dimensional reward combining spatial, temporal, motion, and capti
 
 from typing import List, Dict, Optional
 import sys
+import re
 from pathlib import Path
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from evidence_parser import parse_evidence_chain, validate_evidence_format
+from evidence_parser import parse_evidence_chain, validate_evidence_format, parse_think_predict_chain, ThinkPredictStep
 from motion_metrics import (
     compute_spatial_reward,
     compute_temporal_reward,
@@ -25,6 +26,8 @@ def compute_geometric_reward(
     gt_evidence_steps: Optional[List[List[Dict]]] = None,
     questions: Optional[List[str]] = None,
     answers: Optional[List[str]] = None,
+    img_widths: Optional[List[int]] = None,  # Video dimensions per sample
+    img_heights: Optional[List[int]] = None,  # Video dimensions per sample
     fps: float = 30.0,
     lambda_s: float = 0.25,  # Spatial weight
     lambda_t: float = 0.15,  # Temporal weight
@@ -123,19 +126,60 @@ def compute_geometric_reward(
             print(f"  Completion length: {len(completion_text)} chars")
             print(f"  GT steps: {len(gt_steps)}")
         
-        # Parse completion
+        # Parse completion - try Think-Predict format first, fallback to old format
+        pred_steps = []
+        pred_answer = ""
+        use_think_predict = False
+        
         try:
-            pred_steps, pred_answer = parse_evidence_chain(completion_text)
+            # Get video dimensions for this sample (from dataset via kwargs)
+            img_width = kwargs.get('img_width', [1280])[i] if 'img_width' in kwargs else (img_widths[i] if img_widths and i < len(img_widths) else 1280)
+            img_height = kwargs.get('img_height', [720])[i] if 'img_height' in kwargs else (img_heights[i] if img_heights and i < len(img_heights) else 720)
+            
+            if debug and i == 0:
+                print(f"  Video dimensions: {img_width}×{img_height}")
+                if 'img_width' in kwargs:
+                    print(f"  Got dimensions from kwargs: img_width={kwargs.get('img_width')}, img_height={kwargs.get('img_height')}")
+            
+            # Try new Think-Predict format with actual video dimensions
+            think_pred_steps = parse_think_predict_chain(completion_text, img_width=img_width, img_height=img_height)
+            if think_pred_steps and len(think_pred_steps) > 0:
+                # Convert ThinkPredictStep to EvidenceStep format using Predict bboxes
+                from evidence_parser import EvidenceStep
+                pred_steps = []
+                for tp_step in think_pred_steps:
+                    # Use Predict bboxes as main bboxes (refined estimates)
+                    bboxes = tp_step.pred_bboxes if tp_step.pred_bboxes else tp_step.think_bboxes
+                    if bboxes:
+                        pred_steps.append(EvidenceStep(
+                            t_s=tp_step.time if tp_step.time is not None else 0.0,
+                            t_e=(tp_step.time + 1.0) if tp_step.time is not None else 1.0,
+                            bboxes=bboxes,
+                            motion_text=tp_step.motion_text,
+                            description=tp_step.description,
+                        ))
+                use_think_predict = True
+                # Extract answer
+                answer_match = re.search(r'Answer:\s*([^\n]+)', completion_text, re.IGNORECASE)
+                pred_answer = answer_match.group(1).strip() if answer_match else ""
         except Exception as e:
-            if debug:
-                print(f"  [ERROR] Failed to parse completion: {e}")
-            rewards.append(0.0)
-            continue
+            if debug and i == 0:
+                print(f"  [INFO] Think-Predict parse failed, trying old format: {e}")
+        
+        # Fallback to old format if needed
+        if not pred_steps:
+            try:
+                pred_steps, pred_answer = parse_evidence_chain(completion_text)
+            except Exception as e:
+                if debug:
+                    print(f"  [ERROR] Failed to parse completion (both formats): {e}")
+                rewards.append(0.0)
+                continue
         
         # R_format: Binary gate for validity
-        is_valid = validate_evidence_format(pred_steps)
+        is_valid = len(pred_steps) > 0
         
-        if not is_valid or len(pred_steps) == 0:
+        if not is_valid:
             if debug and i == 0:
                 print(f"  R_format: INVALID (parsed {len(pred_steps)} steps)")
             rewards.append(0.0)
@@ -156,6 +200,15 @@ def compute_geometric_reward(
                 print(f"  R_temporal: {r_temporal:.3f}")
                 print(f"  R_motion: {r_motion:.3f}")
                 print(f"  R_caption: {r_caption:.3f}")
+                
+                # Debug: show sample bbox comparison
+                if pred_steps and gt_steps:
+                    p_bbox = pred_steps[0].bboxes[0] if pred_steps[0].bboxes else None
+                    g_bbox = gt_steps[0].get('bboxes', [[]])[0][0] if gt_steps[0].get('bboxes', [[]]) and gt_steps[0]['bboxes'][0] else None
+                    if p_bbox and g_bbox:
+                        print(f"  Sample bbox comparison:")
+                        print(f"    Pred: {p_bbox}")
+                        print(f"    GT:   {g_bbox}")
             
             # Weighted combination
             total_reward = (

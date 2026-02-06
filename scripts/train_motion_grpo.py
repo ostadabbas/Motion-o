@@ -8,7 +8,7 @@ motion descriptors using geometric rewards (spatial, temporal, motion, caption).
 
 import os
 if "CUDA_VISIBLE_DEVICES" not in os.environ:
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4"  # Use V100s, skip GTX 745
 
 import argparse
 import torch
@@ -18,7 +18,13 @@ from datasets import load_from_disk
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from transformers import AutoProcessor, AutoModelForVision2Seq, BitsAndBytesConfig
+from transformers import (
+    AutoProcessor,
+    Qwen2VLForConditionalGeneration,
+    Qwen2_5_VLForConditionalGeneration,
+    Qwen3VLForConditionalGeneration,
+    BitsAndBytesConfig,
+)
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from trl.trainer import GRPOTrainer, GRPOConfig
 
@@ -233,9 +239,18 @@ def main():
         model_kwargs["quantization_config"] = quantization_config
         print(f"[MOTION_GRPO] Using 4-bit quantization")
     
-    model = AutoModelForVision2Seq.from_pretrained(args.model_id, **model_kwargs)
+    # Select correct model class based on model ID
+    mid = args.model_id.lower()
+    if "qwen3" in mid:
+        model_cls = Qwen3VLForConditionalGeneration
+    elif "qwen2.5" in mid or "qwen2_5" in mid:
+        model_cls = Qwen2_5_VLForConditionalGeneration
+    else:
+        model_cls = Qwen2VLForConditionalGeneration
+    
+    model = model_cls.from_pretrained(args.model_id, **model_kwargs)
     model.config.use_cache = False
-    print(f"[MOTION_GRPO] Model loaded")
+    print(f"[MOTION_GRPO] Model loaded: {model_cls.__name__}")
     
     # Setup LoRA if requested
     peft_config = None
@@ -304,8 +319,8 @@ def main():
     )
     
     # Create reward function with motion-specific parameters
-    def motion_reward_wrapper(*args, **kwargs):
-        # Inject motion-specific parameters
+    def motion_reward_wrapper(*reward_args, **kwargs):
+        # Inject motion-specific parameters from outer scope args
         kwargs['fps'] = args.fps
         kwargs['lambda_s'] = args.lambda_spatial
         kwargs['lambda_t'] = args.lambda_temporal
@@ -313,7 +328,7 @@ def main():
         kwargs['lambda_c'] = args.lambda_caption
         kwargs['lambda_f'] = args.lambda_format
         kwargs['debug'] = args.debug_reward
-        return compute_geometric_reward(*args, **kwargs)
+        return compute_geometric_reward(*reward_args, **kwargs)
     
     # Create trainer with minimal override for image truncation fix
     print(f"[MOTION_GRPO] Creating GRPOTrainer...")

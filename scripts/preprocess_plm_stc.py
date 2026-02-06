@@ -409,6 +409,10 @@ def preprocess_and_save(input_dir: str,
 
 
 def main():
+    import sys
+    print("STARTING PREPROCESSING SCRIPT", flush=True)
+    sys.stdout.flush()
+    
     parser = argparse.ArgumentParser(description="Preprocess PLM-STC dataset for motion reasoning")
     parser.add_argument("input_dir", type=str, help="Input directory with raw PLM-STC data")
     parser.add_argument("output_dir", type=str, help="Output directory for preprocessed dataset")
@@ -419,7 +423,12 @@ def main():
     parser.add_argument("--num-workers", type=int, default=1,
                        help="Number of parallel workers")
     
+    print("PARSING ARGS", flush=True)
+    sys.stdout.flush()
     args = parser.parse_args()
+    
+    print(f"CALLING preprocess_and_save with input={args.input_dir}", flush=True)
+    sys.stdout.flush()
     
     preprocess_and_save(
         args.input_dir,
