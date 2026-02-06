@@ -15,7 +15,7 @@ class EvidenceStep:
     """Structured evidence step with spatial-temporal information."""
     t_s: float  # Start time
     t_e: float  # End time
-    bboxes: List[List[int]]  # List of [x1, y1, x2, y2] bounding boxes
+    bboxes: List[List[float]]  # List of [x1, y1, x2, y2] bounding boxes (normalized [0,1])
     motion_text: str  # Raw motion description text
     description: str  # What happened description
     object_names: List[str] = None  # Optional object names
@@ -31,8 +31,8 @@ class ThinkPredictStep:
     step_num: int
     time: Optional[float]
     description: str
-    think_bboxes: List[List[int]]  # Rough estimates
-    pred_bboxes: List[List[int]]   # Refined predictions
+    think_bboxes: List[List[float]]  # Rough estimates (normalized [0,1])
+    pred_bboxes: List[List[float]]   # Refined predictions (normalized [0,1])
     motion_text: str
 
 
@@ -474,7 +474,7 @@ def extract_final_answer(text: str) -> str:
     return text.strip()
 
 
-def parse_think_predict_chain(text: str, img_width: int = 1280, img_height: int = 720) -> List[ThinkPredictStep]:
+def parse_think_predict_chain(text: str, img_width: int = None, img_height: int = None) -> List[ThinkPredictStep]:
     """
     Parse Think-Predict format from model output.
     
@@ -484,10 +484,11 @@ def parse_think_predict_chain(text: str, img_width: int = 1280, img_height: int 
           Predict: (x1,y1),(x2,y2)
           Motion: motion description
     
-    Coordinates are on 0-1000 scale, converted to pixels.
+    Coordinates are on 0-1000 scale, normalized to [0,1].
+    img_width and img_height parameters are ignored (kept for backward compatibility).
     
     Returns:
-        List of ThinkPredictStep objects with parsed bboxes
+        List of ThinkPredictStep objects with normalized [0,1] bboxes
     """
     steps = []
     
@@ -515,30 +516,30 @@ def parse_think_predict_chain(text: str, img_width: int = 1280, img_height: int 
             end_pos = len(text)
         step_content = text[start_pos:end_pos]
         
-        # Extract Think bboxes (0-1000 scale)
+        # Extract Think bboxes (0-1000 scale → normalize to [0,1])
         think_bboxes = []
         think_pattern = r'Think:\s*\((\d+),(\d+)\),\((\d+),(\d+)\)'
         for bbox_match in re.finditer(think_pattern, step_content):
             x1, y1, x2, y2 = map(int, bbox_match.groups())
-            # Convert from 0-1000 scale to pixels
+            # Normalize from 0-1000 to [0,1]
             think_bboxes.append([
-                int(x1 * img_width / 1000),
-                int(y1 * img_height / 1000),
-                int(x2 * img_width / 1000),
-                int(y2 * img_height / 1000)
+                float(x1 / 1000.0),
+                float(y1 / 1000.0),
+                float(x2 / 1000.0),
+                float(y2 / 1000.0)
             ])
         
-        # Extract Predict bboxes (0-1000 scale)
+        # Extract Predict bboxes (0-1000 scale → normalize to [0,1])
         pred_bboxes = []
         pred_pattern = r'Predict:\s*\((\d+),(\d+)\),\((\d+),(\d+)\)'
         for bbox_match in re.finditer(pred_pattern, step_content):
             x1, y1, x2, y2 = map(int, bbox_match.groups())
-            # Convert from 0-1000 scale to pixels
+            # Normalize from 0-1000 to [0,1]
             pred_bboxes.append([
-                int(x1 * img_width / 1000),
-                int(y1 * img_height / 1000),
-                int(x2 * img_width / 1000),
-                int(y2 * img_height / 1000)
+                float(x1 / 1000.0),
+                float(y1 / 1000.0),
+                float(x2 / 1000.0),
+                float(y2 / 1000.0)
             ])
         
         # Extract motion text

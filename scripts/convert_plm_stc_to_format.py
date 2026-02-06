@@ -200,9 +200,11 @@ def generate_question_answer(video_id: str, dense_captions: List[Dict]) -> tuple
     # Simple question template
     question = "Describe what happens in this video and track the object's motion."
     
-    # Answer is concatenation of all captions
+    # Answer is concatenation of all captions (skip "Out of frame" segments)
     if dense_captions:
-        captions_text = " ".join([cap['caption'] for cap in dense_captions])
+        valid_captions = [cap['caption'] for cap in dense_captions 
+                         if "out of frame" not in cap['caption'].lower()]
+        captions_text = " ".join(valid_captions) if valid_captions else "No visible activity."
         answer = captions_text
     else:
         answer = "No description available."

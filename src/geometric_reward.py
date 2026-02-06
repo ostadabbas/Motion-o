@@ -132,17 +132,9 @@ def compute_geometric_reward(
         use_think_predict = False
         
         try:
-            # Get video dimensions for this sample (from dataset via kwargs)
-            img_width = kwargs.get('img_width', [1280])[i] if 'img_width' in kwargs else (img_widths[i] if img_widths and i < len(img_widths) else 1280)
-            img_height = kwargs.get('img_height', [720])[i] if 'img_height' in kwargs else (img_heights[i] if img_heights and i < len(img_heights) else 720)
-            
-            if debug and i == 0:
-                print(f"  Video dimensions: {img_width}×{img_height}")
-                if 'img_width' in kwargs:
-                    print(f"  Got dimensions from kwargs: img_width={kwargs.get('img_width')}, img_height={kwargs.get('img_height')}")
-            
-            # Try new Think-Predict format with actual video dimensions
-            think_pred_steps = parse_think_predict_chain(completion_text, img_width=img_width, img_height=img_height)
+            # Parse Think-Predict format (now returns normalized [0,1] bboxes)
+            # No need for video dimensions - everything is normalized
+            think_pred_steps = parse_think_predict_chain(completion_text)
             if think_pred_steps and len(think_pred_steps) > 0:
                 # Convert ThinkPredictStep to EvidenceStep format using Predict bboxes
                 from evidence_parser import EvidenceStep
@@ -201,12 +193,12 @@ def compute_geometric_reward(
                 print(f"  R_motion: {r_motion:.3f}")
                 print(f"  R_caption: {r_caption:.3f}")
                 
-                # Debug: show sample bbox comparison
+                # Debug: show sample bbox comparison (normalized [0,1])
                 if pred_steps and gt_steps:
                     p_bbox = pred_steps[0].bboxes[0] if pred_steps[0].bboxes else None
-                    g_bbox = gt_steps[0].get('bboxes', [[]])[0][0] if gt_steps[0].get('bboxes', [[]]) and gt_steps[0]['bboxes'][0] else None
+                    g_bbox = gt_steps[0].get('bbox', None)
                     if p_bbox and g_bbox:
-                        print(f"  Sample bbox comparison:")
+                        print(f"  Sample bbox comparison (normalized [0,1]):")
                         print(f"    Pred: {p_bbox}")
                         print(f"    GT:   {g_bbox}")
             

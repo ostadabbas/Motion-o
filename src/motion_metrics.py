@@ -97,8 +97,8 @@ def compute_spatial_reward(pred_steps: List, gt_steps: List) -> float:
     R_spatial: Average IoU across all matched bboxes in all steps.
     
     Args:
-        pred_steps: List of predicted EvidenceStep objects
-        gt_steps: List of ground truth evidence step dicts
+        pred_steps: List of predicted EvidenceStep objects with normalized [0,1] bboxes
+        gt_steps: List of ground truth evidence step dicts with single normalized bbox per step
     
     Returns:
         Average spatial IoU score between 0.0 and 1.0
@@ -116,27 +116,28 @@ def compute_spatial_reward(pred_steps: List, gt_steps: List) -> float:
         pred_step = pred_steps[i]
         gt_step = gt_steps[i]
         
+        # Get predicted bboxes (list of bboxes for this step)
         pred_bboxes = pred_step.bboxes if hasattr(pred_step, 'bboxes') else []
-        gt_bboxes = gt_step.get('bboxes', [])
         
-        # Handle case where gt_bboxes is per-frame: [[bbox1], [bbox2], ...]
-        # Flatten to list of bboxes
-        if gt_bboxes and isinstance(gt_bboxes[0], list) and len(gt_bboxes[0]) > 0:
-            if isinstance(gt_bboxes[0][0], list):
-                # Per-frame format: flatten
-                gt_bboxes_flat = []
-                for frame_boxes in gt_bboxes:
-                    gt_bboxes_flat.extend(frame_boxes)
-                gt_bboxes = gt_bboxes_flat
+        # Get GT bbox (single bbox per step in new format)
+        # Support both old format (bboxes=[]) and new format (bbox=[x1,y1,x2,y2])
+        gt_bbox = gt_step.get('bbox', None)
+        if gt_bbox is None:
+            # Try old format
+            gt_bboxes_old = gt_step.get('bboxes', [])
+            if gt_bboxes_old:
+                # Old format had per-frame bboxes, skip for now
+                continue
         
-        if not pred_bboxes or not gt_bboxes:
+        # Skip if either has no bbox
+        if not pred_bboxes or not gt_bbox or len(gt_bbox) == 0:
             continue
         
-        # Match bboxes
-        matches = match_bboxes_hungarian(pred_bboxes, gt_bboxes)
-        
-        for pred_idx, gt_idx in matches:
-            iou = compute_bbox_iou(pred_bboxes[pred_idx], gt_bboxes[gt_idx])
+        # Compute IoU between pred bbox and GT bbox
+        # Take the first predicted bbox (should be only one per step)
+        pred_bbox = pred_bboxes[0] if pred_bboxes else None
+        if pred_bbox and len(pred_bbox) == 4 and len(gt_bbox) == 4:
+            iou = compute_bbox_iou(pred_bbox, gt_bbox)
             total_iou += iou
             total_matches += 1
     

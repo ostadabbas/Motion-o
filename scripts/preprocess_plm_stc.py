@@ -25,13 +25,14 @@ from datasets import Dataset as HFDataset
 import math
 
 
-def masklets_to_bboxes(masklets: np.ndarray) -> List[List[int]]:
+def masklets_to_bboxes(masklets: np.ndarray, normalize: bool = True) -> List[List[float]]:
     """
     Convert segmentation masklets to bounding boxes per frame.
     
     Args:
         masklets: Binary mask sequence of shape (num_frames, H, W)
                  or (num_frames, num_objects, H, W)
+        normalize: If True, return normalized [0,1] coordinates
     
     Returns:
         List of bboxes per frame: [[x1, y1, x2, y2], ...]
@@ -58,13 +59,52 @@ def masklets_to_bboxes(masklets: np.ndarray) -> List[List[int]]:
             y_min, y_max = coords[0].min(), coords[0].max()
             x_min, x_max = coords[1].min(), coords[1].max()
             
-            # Convert to [x1, y1, x2, y2] format
-            bbox = [int(x_min), int(y_min), int(x_max), int(y_max)]
+            if normalize:
+                # Normalize to [0, 1] coordinates
+                bbox = [
+                    float(x_min / W),
+                    float(y_min / H),
+                    float(x_max / W),
+                    float(y_max / H)
+                ]
+            else:
+                # Keep pixel coordinates
+                bbox = [int(x_min), int(y_min), int(x_max), int(y_max)]
+            
             frame_bboxes.append(bbox)
         
         bboxes_per_frame.append(frame_bboxes)
     
     return bboxes_per_frame
+
+
+def aggregate_segment_bbox(frame_bboxes: List[List[List[float]]]) -> List[float]:
+    """
+    Aggregate per-frame bboxes into a single representative bbox for the segment.
+    
+    Takes average of all bboxes across all frames to get one representative box
+    for the entire temporal segment.
+    
+    Args:
+        frame_bboxes: List of per-frame bbox lists: [[[x1,y1,x2,y2], ...], ...]
+    
+    Returns:
+        Single aggregated bbox [x1, y1, x2, y2] or None if no bboxes
+    """
+    all_boxes = []
+    for frame_boxes in frame_bboxes:
+        all_boxes.extend(frame_boxes)
+    
+    if not all_boxes:
+        return None
+    
+    # Average coordinates across all bboxes
+    x1 = sum(box[0] for box in all_boxes) / len(all_boxes)
+    y1 = sum(box[1] for box in all_boxes) / len(all_boxes)
+    x2 = sum(box[2] for box in all_boxes) / len(all_boxes)
+    y2 = sum(box[3] for box in all_boxes) / len(all_boxes)
+    
+    return [float(x1), float(y1), float(x2), float(y2)]
 
 
 def compute_centroid_trajectory(bboxes: List[List[int]]) -> List[Tuple[float, float]]:
@@ -300,6 +340,10 @@ def preprocess_item(item: Dict, data_dir: Path, max_frames: int = 32) -> Optiona
             t_e = step["t_e"]
             caption = step.get("caption", "")
             
+            # SKIP segments where object is out of frame
+            if "out of frame" in caption.lower():
+                continue
+            
             # Load masklet
             masklet_rel_path = step.get("masklet_path", f"{video_id}_{step_idx}.npy")
             masklet_path = data_dir / "masklets" / masklet_rel_path
@@ -310,30 +354,35 @@ def preprocess_item(item: Dict, data_dir: Path, max_frames: int = 32) -> Optiona
             
             masklets = np.load(str(masklet_path))
             
-            # Convert masklets to bboxes
-            bboxes = masklets_to_bboxes(masklets)
-            
-            # Compute motion descriptors for each object
-            # If multiple objects, compute separately then aggregate
-            if len(bboxes) == 0:
+            # Check if masklet is actually empty (no segmentation)
+            if np.count_nonzero(masklets) == 0:
+                # Truly empty masklet, skip
                 continue
             
-            # For simplicity, take first object per frame (or can track multiple)
-            primary_bboxes = [frame_boxes[0] if len(frame_boxes) > 0 else [0, 0, 0, 0] 
-                            for frame_boxes in bboxes]
+            # Convert masklets to normalized bboxes [0,1]
+            bboxes_per_frame = masklets_to_bboxes(masklets, normalize=True)
             
-            motion_desc = compute_motion_descriptors(primary_bboxes, fps)
+            # Aggregate per-frame bboxes into single representative bbox for segment
+            segment_bbox = aggregate_segment_bbox(bboxes_per_frame)
+            
+            if segment_bbox is None:
+                # No valid bbox for this segment
+                continue
             
             # Extract frames for this step
             step_frames = extract_frames_from_video(
                 str(video_path), t_s, t_e, fps=fps, max_frames=max_frames
             )
             
+            if len(step_frames) == 0:
+                # No frames extracted, skip
+                continue
+            
+            # Store single normalized bbox per segment
             processed_step = {
                 "t_s": float(t_s),
                 "t_e": float(t_e),
-                "bboxes": bboxes,  # All bboxes per frame
-                "motion_desc": motion_desc,
+                "bbox": segment_bbox,  # Single aggregated normalized bbox [x1,y1,x2,y2] in [0,1]
                 "caption": caption
             }
             processed_steps.append(processed_step)

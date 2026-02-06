@@ -198,12 +198,8 @@ After all steps: Answer: your final answer"""
         # Build messages (single user message)
         messages = [{"role": "user", "content": user_content_list}]
         
-        # Get video dimensions from original frames (BEFORE resize)
-        img_width, img_height = 1280, 720  # Default fallback
-        if original_width is not None and original_height is not None:
-            img_width, img_height = original_width, original_height
-        
         # Return in TRL GRPO format
+        # Note: No longer need to pass img_width/img_height since all coords are normalized [0,1]
         return {
             "prompt": messages,  # Messages format for TRL
             "assistant": answer,  # Ground truth answer (reference)
@@ -211,8 +207,6 @@ After all steps: Answer: your final answer"""
             "question": question,  # For logging
             "answer": answer,  # For reward computation
             "images": images,  # For compatibility
-            "img_width": img_width,  # For coordinate conversion in rewards
-            "img_height": img_height,  # For coordinate conversion in rewards
         }
 
 

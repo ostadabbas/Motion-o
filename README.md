@@ -1,7 +1,22 @@
 # Spatio-Temporal Motion Reasoning with GRPO
 
-
 Training vision-language models to reason about video motion through verifiable, spatially-grounded evidence chains using Group Relative Policy Optimization (GRPO).
+
+## ⚠️ CRITICAL ISSUE - DATASET PROBLEM
+
+**STATUS**: The PLM-Video-Human RDCap dataset has **INCORRECT masklet_id mappings**. The `masklet_id` field in RDCap does NOT correspond to the objects described in `dense_captions`. SA-V masklets are tracking wrong objects (furniture, background, etc.) instead of people mentioned in captions.
+
+**Examples found**:
+- `sav_015834`: Caption says "person walking" but masklet tracks walkway shadow/grate
+- `sav_003127`: Caption says "man walking into mall" but masklet_id=1 is EMPTY
+- `sav_017599`: Caption says "boy enters frame" but all masklets are EMPTY at described timestamps
+
+**Impact**: Cannot train on this dataset without fixing masklet associations.
+
+**Options**:
+1. Implement heuristic search across ALL masklets per frame (find largest moving person-shaped object)
+2. Report issue to Meta/Facebook and wait for fix
+3. Switch to different dataset (e.g., pure SA-V with auto-generated captions)
 
 ## Overview
 
@@ -47,35 +62,85 @@ conda activate motion_vlm
 
 # Install dependencies
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-pip install transformers accelerate peft trl datasets pillow opencv-python scipy tqdm
+pip install transformers accelerate peft trl datasets pillow opencv-python scipy tqdm pycocotools
+```
+
+## Dataset Setup (PLM-Video-Human RDCap)
+
+### Step 1: Download RDCap Annotations
+
+```bash
+# Annotations are downloaded automatically via HuggingFace
+python -c "from datasets import load_dataset; ds = load_dataset('facebook/PLM-Video-Human', 'rdcap', split='train', streaming=True)"
+```
+
+### Step 2: Download SA-V Videos
+
+The RDCap annotations reference videos from the Segment Anything Video (SA-V) dataset, which must be downloaded manually.
+
+```bash
+# 1. Go to https://ai.meta.com/datasets/segment-anything-video/
+# 2. Accept terms and download videos
+# 3. Extract to /mnt/data/plm_stc/raw/sa-v/
+# 4. Verify structure:
+#    /mnt/data/plm_stc/raw/sa-v/
+#    ├── sav_000001.mp4
+#    ├── sav_000001_manual.json  (masklet annotations)
+#    ├── sav_000001_auto.json
+#    └── ... (more videos)
+
+# Or use download script (requires authentication):
+bash scripts/download_sav_videos.sh
+```
+
+### Step 3: Convert RDCap + SA-V to Training Format
+
+```bash
+python scripts/convert_plm_stc_to_format.py \
+    --input-annotations /mnt/data/plm_stc/raw/rdcap \
+    --input-videos /mnt/data/plm_stc/raw/sa-v \
+    --output-dir /mnt/data/plm_stc/formatted_test \
+    --limit 100  # Start small for testing
+
+# Output structure:
+#   /mnt/data/plm_stc/formatted_test/
+#   ├── videos/ (symlinks to SA-V videos)
+#   ├── masklets/ (converted .npy files)
+#   └── annotations/train.json
+```
+
+**Note**: This script:
+- Loads masklets from SA-V JSON files
+- Decodes RLE masks to numpy arrays
+- Slices masklets by temporal segments from dense_captions
+- ⚠️ **USES INCORRECT masklet_id FROM RDCAP** (known issue)
+
+### Step 4: Preprocess for Training
+
+```bash
+python scripts/preprocess_plm_stc.py \
+    /mnt/data/plm_stc/formatted_test \
+    /mnt/data/plm_stc/preprocessed_test \
+    --split train \
+    --max-frames 8
+
+# Output: HuggingFace dataset with frames + evidence_steps + bboxes
+#   /mnt/data/plm_stc/preprocessed_test/train/
+```
+
+### Debug Visualizations
+
+```bash
+# Visualize all masklets for a specific frame (to find correct object)
+python scripts/debug_all_masklets.py
+
+# Visualize final preprocessed dataset
+python scripts/visualize_clean_dataset.py
 ```
 
 ## Quick Start
 
-### 1. Preprocess PLM-STC Dataset
-
-Convert raw PLM-STC data (masklets, annotations) into training-ready format:
-
-```bash
-python scripts/preprocess_plm_stc.py \
-    /path/to/plm_stc \
-    /path/to/output \
-    --split train \
-    --max-frames 32
-```
-
-**Expected PLM-STC structure:**
-```
-plm_stc/
-├── videos/
-│   └── {video_id}.mp4
-├── annotations/
-│   └── train.json  # Contains: video_id, question, answer, evidence_steps
-└── masklets/
-    └── {video_id}_{step_idx}.npy  # Masklet arrays
-```
-
-### 2. Test Pipeline
+### 1. Test Pipeline
 
 Verify all components work with synthetic data:
 
@@ -83,7 +148,9 @@ Verify all components work with synthetic data:
 python scripts/test_motion_pipeline.py
 ```
 
-### 3. Train Model
+### 2. Train Model
+
+⚠️ **WARNING**: Training will not work correctly due to incorrect masklet mappings in RDCap dataset. See "CRITICAL ISSUE" section above.
 
 Train Qwen3-VL-8B with GRPO on preprocessed data:
 
@@ -112,7 +179,7 @@ python scripts/train_motion_grpo.py /path/to/preprocessed/train \
     --lambda-caption 0.20
 ```
 
-### 4. Quick Validation (10 steps)
+### 3. Quick Validation (10 steps)
 
 ```bash
 python scripts/train_motion_grpo.py /path/to/dataset \
@@ -122,28 +189,122 @@ python scripts/train_motion_grpo.py /path/to/dataset \
     --debug-reward
 ```
 
+## Debugging & Visualization Tools
+
+### Check Raw RDCap Data
+
+```bash
+# View RDCap sample structure
+python -c "
+from datasets import load_dataset
+ds = load_dataset('facebook/PLM-Video-Human', 'rdcap', split='train', streaming=True)
+sample = next(iter(ds))
+print('Video:', sample['video'])
+print('Masklet ID:', sample['masklet_id'])
+print('Dense captions:', sample['dense_captions'])
+"
+```
+
+### Visualize SA-V Masklets
+
+```bash
+# Show all masklets for a specific frame
+python scripts/debug_all_masklets.py
+
+# This reveals which masklet_id actually contains the person
+# (often different from what RDCap says!)
+```
+
+### Visualize Preprocessed Dataset
+
+```bash
+python scripts/visualize_clean_dataset.py
+
+# Shows final GT bboxes overlaid on frames
+# Helps verify if bboxes match captions
+```
+
+### Check Coordinate Systems
+
+```bash
+python scripts/debug_coordinates.py
+
+# Verifies pixel → normalized → pixel conversions
+```
+
+## Known Issues & Workarounds
+
+### Issue 1: Incorrect Masklet IDs (CRITICAL)
+
+**Problem**: RDCap's `masklet_id` does not match objects in `dense_captions`
+
+**Evidence**:
+- Run `scripts/debug_all_masklets.py` to see all masklets for a frame
+- Compare visual objects with caption text
+- Most samples have mismatched masklets
+
+**Workarounds**:
+1. **Heuristic Search**: Modify `convert_plm_stc_to_format.py` to search ALL masklets and pick the largest moving person-shaped object
+2. **Manual Filtering**: Curate subset of videos where masklets are correct
+3. **Use Different Dataset**: Switch to pure SA-V with auto-generated captions
+
+### Issue 2: "Out of frame" Segments
+
+**Problem**: RDCap includes temporal segments where subject is not visible
+
+**Solution**: Current preprocessing filters out segments with "Out of frame" caption
+
+```python
+# In convert_plm_stc_to_format.py
+if "out of frame" in caption.lower():
+    continue  # Skip this segment
+```
+
+### Issue 3: Empty Masklets
+
+**Problem**: Some masklets have zero non-zero pixels despite non-empty captions
+
+**Detection**:
+```python
+masklets = np.load('masklet.npy')
+if np.count_nonzero(masklets) == 0:
+    print("Empty masklet!")
+```
+
+**Solution**: Preprocessing skips empty masklets
+
+### Issue 4: Video Decoding Errors
+
+**Problem**: Some SA-V videos have corrupted frames (`error while decoding MB`)
+
+**Workaround**: Use `try/except` in frame extraction and skip corrupted videos
+
 ## Project Structure
 
 ```
 vlmm-mcot/
 ├── scripts/
-│   ├── train_motion_grpo.py         # Main GRPO training script
-│   ├── preprocess_plm_stc.py        # PLM-STC preprocessing
-│   ├── test_motion_pipeline.py      # End-to-end tests
-│   └── archived/                    # Old Dora scripts
+│   ├── train_motion_grpo.py              # Main GRPO training script
+│   ├── convert_plm_stc_to_format.py      # Convert RDCap+SA-V to intermediate format
+│   ├── preprocess_plm_stc.py             # Preprocess to HF dataset with frames
+│   ├── test_motion_pipeline.py           # End-to-end tests
+│   ├── debug_all_masklets.py             # Visualize ALL masklets per frame
+│   ├── visualize_clean_dataset.py        # Visualize final preprocessed data
+│   ├── debug_coordinates.py              # Test coordinate conversions
+│   └── archived/                         # Old Dora scripts
 ├── src/
-│   ├── motion_dataset.py            # Motion GRPO dataset
-│   ├── evidence_parser.py           # Parse evidence chains
-│   ├── motion_metrics.py            # Geometric metrics
-│   ├── geometric_reward.py          # Multi-dim reward
-│   ├── model_loader.py              # VLM model loader
-│   ├── video_utils.py               # Frame extraction
-│   ├── text_cleaning.py             # Text utilities
-│   └── archived/                    # Old modules
+│   ├── motion_dataset.py                 # Motion GRPO dataset
+│   ├── evidence_parser.py                # Parse evidence chains
+│   ├── motion_metrics.py                 # Geometric metrics
+│   ├── geometric_reward.py               # Multi-dim reward
+│   ├── model_loader.py                   # VLM model loader
+│   ├── video_utils.py                    # Frame extraction
+│   ├── text_cleaning.py                  # Text utilities
+│   └── archived/                         # Old modules
 ├── shell_scripts/
-│   └── train_motion.sh              # Training launcher
+│   └── train_motion.sh                   # Training launcher
 └── config/
-    └── motion_config.yaml           # Configuration (optional)
+    └── motion_config.yaml                # Configuration (optional)
 ```
 
 ## Example Output
@@ -203,7 +364,39 @@ lambda_caption = 0.20   # Text similarity (F1 + Levenshtein)
 
 - GPU: 40GB+ VRAM (A100/H100) for 8B model with 4-bit, or 4x V100 (16GB each)
 - CPU: 32+ cores for data loading
-- Storage: ~500GB for PLM-STC dataset + preprocessed data
+- Storage: ~500GB for SA-V videos + ~100GB for preprocessed data
+
+## Next Steps to Fix Dataset Issue
+
+### Option 1: Implement Heuristic Masklet Search
+
+Modify `scripts/convert_plm_stc_to_format.py`:
+
+```python
+def find_best_masklet(masklet_data, caption, frame_range):
+    """
+    Search ALL masklets and pick the most likely match based on:
+    - Size (prefer person-sized objects: 5,000-50,000 pixels)
+    - Motion (prefer objects that move consistently)
+    - Position (prefer objects in center/foreground)
+    - Temporal consistency (prefer objects visible throughout segment)
+    """
+    # Implementation needed
+    pass
+```
+
+### Option 2: Manual Curation
+
+1. Run `scripts/debug_all_masklets.py` on entire dataset
+2. Create mapping file: `{video_id: {correct_masklet_id}}`
+3. Update conversion script to use corrected mappings
+
+### Option 3: Switch Dataset
+
+Use pure SA-V with auto-generated captions:
+- SA-V has correct masklet annotations
+- Generate captions using existing VLM (e.g., Qwen2-VL)
+- Trade caption quality for correct spatial grounding
 
 ## Citation
 
