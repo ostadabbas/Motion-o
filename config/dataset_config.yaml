@@ -1,0 +1,32 @@
+# Dataset extraction configuration
+
+# Transcript extraction
+use_whisper: false  # Set to true for automatic transcript extraction
+whisper_model: "base"  # Options: tiny, base, small, medium, large
+language: null  # Language code (e.g., "en"), null for auto-detect
+
+# Pause detection
+silence_threshold: -40.0  # dB threshold for silence detection
+min_silence_duration: 1.0  # Minimum duration (seconds) to consider as pause
+
+# Q&A segmentation windows (generic approach)
+question_window_before: 10.0  # Seconds before pause to search for question
+answer_window_after: 10.0  # Seconds after pause to search for answer
+
+# Frame extraction settings
+pause_fps: 0.25  # FPS for sampling frames during pause
+pause_max_frames: 4  # Maximum frames to extract during pause
+
+# Full video context
+use_full_video: true  # Include full video context before pause
+full_video_fps: 0.2  # FPS for sampling full video context
+full_video_max_frames: 12  # Maximum frames for full video context (reduced for memory)
+
+# Collage settings
+grid_cols: 2  # Number of columns in collage grid
+grid_rows: 2  # Number of rows in collage grid
+max_collages: 2  # Maximum number of collages (reduced for memory - gives ~7 total frames)
+
+# Image processing
+max_size: 512  # Maximum size for frame resizing (pixels)
+

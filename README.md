@@ -1,250 +1,223 @@
-# Visual Token Motion Analysis for MCoT
+# Spatio-Temporal Motion Reasoning with GRPO
 
-**Motion Chain-of-Thought (MCoT)**: Enabling native spatiotemporal reasoning in Vision-Language Models through visual token augmentation.
 
-## Project Overview
+Training vision-language models to reason about video motion through verifiable, spatially-grounded evidence chains using Group Relative Policy Optimization (GRPO).
 
-This project analyzes visual tokens from Qwen2-VL-7B-Instruct to determine if and how they can be augmented with motion information for improved video understanding. The goal is to enable models to reason about motion explicitly in token space, rather than implicitly through text generation.
+## Overview
 
-## Key Findings ✅
+This project trains VLMs (Qwen3-VL-8B) to generate **spatio-temporal evidence chains** with:
+- **Bounding boxes** for spatial grounding (`<bbox>[x1,y1,x2,y2]</bbox>`)
+- **Motion descriptors** (centroid displacement, velocity, direction)
+- **Temporal intervals** for each reasoning step
+- **Verifiable reasoning** anchored to real coordinates
 
-**Motion augmentation is FEASIBLE!**
+The system uses **RL-only alignment** with geometric rewards (no SFT), training on the PLM-STC dataset with masklets and motion annotations.
 
-1. ✅ **Deltas are meaningful**: Token differences correlate with motion (p < 10^-12)
-2. ✅ **Spatial correspondence exists**: Tokens map consistently to image regions across frames
-3. ✅ **Augmentation is compatible**: Tokens can be modified safely (alpha ∈ [0.3, 0.5])
-4. ✅ **Baseline has motion awareness**: Model already encodes motion implicitly
-
-### Critical Statistics
+## Architecture
 
 ```
-Motion Detection (Token Deltas):
-  visual.blocks.last: 1.14x ratio (p = 4.4×10^-13)
-  visual.merger:      1.28x ratio (p = 6.2×10^-48)
+PLM-STC Dataset → Preprocessing → Motion Dataset
+                                        ↓
+                                   GRPO Trainer
+                                        ↓
+                    Model Output: Evidence Chain with Bboxes
+                                        ↓
+                                  Evidence Parser
+                                        ↓
+                               Geometric Reward Function
+                                        ↓
+                    (Spatial IoU + Temporal IoU + Motion + Caption)
+```
 
-Temporal Scaling:
-  visual.blocks.last: R² = 0.995 (velocity encoding)
-  visual.merger:      R² = 0.673 (displacement encoding)
+### Geometric Rewards
 
-Directional Information:
-  visual.blocks.last: PC1 explains 30.1% variance
-  visual.merger:      PC1 explains 11.6% variance
+Multi-dimensional reward combining:
+- **R_spatial** (λ=0.25): Bbox IoU via Hungarian matching
+- **R_temporal** (λ=0.15): Temporal interval IoU
+- **R_motion** (λ=0.35): Trajectory matching (direction + speed + smoothness)
+- **R_caption** (λ=0.20): Text similarity (token F1 + Levenshtein)
+- **R_format** (gate): Parseability validation
 
-Baseline Motion Awareness: 100% (mentions motion in all responses)
+## Installation
+
+```bash
+# Create conda environment
+conda create -n motion_vlm python=3.10
+conda activate motion_vlm
+
+# Install dependencies
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install transformers accelerate peft trl datasets pillow opencv-python scipy tqdm
+```
+
+## Quick Start
+
+### 1. Preprocess PLM-STC Dataset
+
+Convert raw PLM-STC data (masklets, annotations) into training-ready format:
+
+```bash
+python scripts/preprocess_plm_stc.py \
+    /path/to/plm_stc \
+    /path/to/output \
+    --split train \
+    --max-frames 32
+```
+
+**Expected PLM-STC structure:**
+```
+plm_stc/
+├── videos/
+│   └── {video_id}.mp4
+├── annotations/
+│   └── train.json  # Contains: video_id, question, answer, evidence_steps
+└── masklets/
+    └── {video_id}_{step_idx}.npy  # Masklet arrays
+```
+
+### 2. Test Pipeline
+
+Verify all components work with synthetic data:
+
+```bash
+python scripts/test_motion_pipeline.py
+```
+
+### 3. Train Model
+
+Train Qwen3-VL-8B with GRPO on preprocessed data:
+
+```bash
+bash shell_scripts/train_motion.sh /path/to/preprocessed/train
+```
+
+Or manually:
+
+```bash
+python scripts/train_motion_grpo.py /path/to/preprocessed/train \
+    --output-dir ./outputs/motion_grpo \
+    --model-id Qwen/Qwen3-VL-8B-Instruct \
+    --use-4bit \
+    --use-lora \
+    --num-generations 8 \
+    --max-steps 1000 \
+    --batch-size 4 \
+    --gradient-accumulation-steps 4 \
+    --learning-rate 1e-5 \
+    --max-response-length 512 \
+    --max-frames 16 \
+    --lambda-spatial 0.25 \
+    --lambda-temporal 0.15 \
+    --lambda-motion 0.35 \
+    --lambda-caption 0.20
+```
+
+### 4. Quick Validation (10 steps)
+
+```bash
+python scripts/train_motion_grpo.py /path/to/dataset \
+    --max-steps 10 \
+    --use-lora \
+    --use-4bit \
+    --debug-reward
 ```
 
 ## Project Structure
 
 ```
 vlmm-mcot/
-├── README.md                           # This file
-├── FINDINGS.md                         # Complete analysis results
-├── ARCHITECTURE_NOTES.md               # Qwen2-VL token extraction details
-├── RECOMMENDATIONS.md                  # Implementation roadmap
-│
-├── token_extractor.py                  # Core: Extract visual tokens with hooks
-├── spatial_analysis.py                 # Analyze token spatial structure
-├── temporal_analysis.py                # Analyze token dynamics across frames
-├── motion_content_tests.py             # Test motion information encoding
-├── augmentation_test.py                # Test token augmentation compatibility
-│
-├── analyze_tokens.py                   # Main analysis script (12 frames)
-├── run_extended_analysis.py            # Extended analysis (30 frames)
-├── test_baseline_model.py              # Baseline motion awareness test
-│
-├── test_videos/
-│   └── Ball_Animation_Video_Generation.mp4
-│
-└── results/
-    ├── spatial_results.json
-    ├── temporal_results.json
-    ├── baseline_response.json
-    ├── spatial/                        # Visualizations
-    ├── temporal/
-    └── motion_content/
+├── scripts/
+│   ├── train_motion_grpo.py         # Main GRPO training script
+│   ├── preprocess_plm_stc.py        # PLM-STC preprocessing
+│   ├── test_motion_pipeline.py      # End-to-end tests
+│   └── archived/                    # Old Dora scripts
+├── src/
+│   ├── motion_dataset.py            # Motion GRPO dataset
+│   ├── evidence_parser.py           # Parse evidence chains
+│   ├── motion_metrics.py            # Geometric metrics
+│   ├── geometric_reward.py          # Multi-dim reward
+│   ├── model_loader.py              # VLM model loader
+│   ├── video_utils.py               # Frame extraction
+│   ├── text_cleaning.py             # Text utilities
+│   └── archived/                    # Old modules
+├── shell_scripts/
+│   └── train_motion.sh              # Training launcher
+└── config/
+    └── motion_config.yaml           # Configuration (optional)
 ```
 
-## Quick Start
+## Example Output
 
-### Installation
+The model generates evidence chains like:
 
-```bash
-# Create conda environment
-conda create -n dora_cuda python=3.10
-conda activate dora_cuda
+```
+Step 1: [2.1–3.4] Person <bbox>[120,80,220,350]</bbox> picks up ball <bbox>[200,300,240,340]</bbox>
+Motion: ball centroid shifts from (220,320) to (180,120) over 1.3s, velocity 150px/s
+Description: Person reaches down and picks up the ball from the ground
 
-# Install dependencies
-pip install torch torchvision transformers accelerate
-pip install qwen-vl-utils scikit-learn matplotlib seaborn opencv-python
+Step 2: [3.4–5.0] Ball <bbox>[160,50,210,100]</bbox> hits wall
+Motion: velocity direction flips from (-30,-150)/s to (+20,+80)/s, motion reversal detected
+Description: Ball bounces off the wall and changes direction
+
+Answer: The ball changed direction because it hit the wall at t=3.4s
 ```
 
-### Run Analysis
+## Key Features
 
-```bash
-# Basic analysis (12 frames)
-python analyze_tokens.py
+### RL-Only Training
+No supervised fine-tuning needed - Qwen2.5-VL already has bbox generation capability, GRPO composes it into motion chains through reward signals.
 
-# Extended analysis with motion content tests (30 frames)
-python run_extended_analysis.py
+### Verifiable Reasoning
+Every reasoning step is falsifiable with real coordinates:
+- Bboxes can be overlaid on frames
+- Motion descriptors can be computed from predicted bboxes
+- Temporal intervals can be validated against video timestamps
 
-# Test baseline model
-python test_baseline_model.py
-```
+### Modular Design
+Each component is independent and testable:
+- `evidence_parser.py`: Parsing only
+- `motion_metrics.py`: Individual metrics
+- `geometric_reward.py`: Reward composition
+- Easy to tune weights or swap metrics
 
-### Extract Tokens from Your Own Video
+## Configuration
 
+Default reward weights (can be adjusted via CLI):
 ```python
-from token_extractor import TokenExtractor
-
-# Initialize
-extractor = TokenExtractor()
-
-# Load frames
-frames, fps = extractor.load_video_frames("your_video.mp4", num_frames=12)
-
-# Extract tokens frame-by-frame
-for frame in frames:
-    tokens = extractor.extract_tokens_from_frames([frame])
-    # tokens['visual.blocks.last']: [4784, 1280]
-    # tokens['visual.merger']: [1196, 3584]
-    
-# Cleanup
-extractor.cleanup()
+lambda_spatial = 0.25   # Bbox IoU
+lambda_temporal = 0.15  # Interval IoU  
+lambda_motion = 0.35    # Trajectory (direction + speed + smoothness)
+lambda_caption = 0.20   # Text similarity (F1 + Levenshtein)
 ```
 
-## Analysis Results
+## Training Tips
 
-### 1. Spatial Token Structure
-
-| Layer | Tokens | Dimensions | Grid | Coverage |
-|-------|--------|------------|------|----------|
-| visual.blocks.last | 4,784 | 1,280 | 52×92 | ~25×8 px/token |
-| visual.merger | 1,196 | 3,584 | 26×46 | ~49×16 px/token |
-
-**Finding**: Tokens maintain consistent spatial correspondence across frames - no need for optical flow!
-
-### 2. Motion Encoding
-
-**Delta Analysis** (consecutive frame differences):
-
-- Motion regions: Δ = 2964.85 ± 2765.71 (visual.blocks.last)
-- Static regions: Δ = 2607.56 ± 2653.32 (visual.blocks.last)
-- **Ratio: 1.14x, p < 10^-13** ✅
-
-**Temporal Scaling**:
-- visual.blocks.last: Nearly perfect linear scaling (R²=0.995) → **velocity encoding**
-- visual.merger: Sub-linear scaling (R²=0.673) → **displacement encoding**
-
-### 3. Motion Information Content
-
-| Test | visual.blocks.last | visual.merger |
-|------|-------------------|---------------|
-| **Predictive Power** (F1) | 0.336 | 0.180 |
-| **Temporal Linearity** (R²) | 0.995 | 0.673 |
-| **Directionality** (PC1 %) | 30.1% | 11.6% |
-| **Clustering** | 3 clusters | 3 clusters |
-
-**Finding**: Early layer (blocks.last) better for directional motion. Late layer (merger) better for motion presence.
-
-### 4. Baseline Motion Awareness
-
-**Test**: Three prompts on ball video
-
-**Result**: Model mentions motion in ALL responses (100% awareness)
-
-**Example Response**:
-> "In the video, a red ball is seen rolling on a wooden floor. The ball **moves** from the **left** side of the frame towards the **right**, eventually coming to a stop. The video captures the simple yet elegant **motion** of the ball as it **travels across** the floor."
-
-**Implication**: Model already has implicit motion encoding. MCoT will make it explicit for better reasoning.
-
-## Recommended Next Steps
-
-### Phase 1: Zero-Shot Evaluation (Week 1-2)
-
-Test augmentation without training:
-
-```python
-# Augment tokens
-v_aug[t] = v_base[t] + alpha * (v_base[t+1] - v_base[t])
-# alpha ∈ [0.3, 0.5]
-
-# Evaluate on motion-heavy benchmarks
-# Expected gain: 2-5% on motion questions
-```
-
-### Phase 2: Learnable Alpha (Month 1)
-
-Optimize alpha values:
-
-```python
-class MotionAugmentor(nn.Module):
-    def __init__(self):
-        self.alpha = nn.Parameter(torch.tensor(0.5))
-    
-    def forward(self, tokens, deltas):
-        return tokens + torch.sigmoid(self.alpha) * deltas
-```
-
-### Phase 3: Full MCoT Training (Month 2-3)
-
-End-to-end training on video QA datasets.
-
-**Expected Performance Gain**: 10-20% on motion-reasoning tasks.
-
-## Documentation
-
-- **[FINDINGS.md](FINDINGS.md)**: Complete analysis results with statistics
-- **[ARCHITECTURE_NOTES.md](ARCHITECTURE_NOTES.md)**: Token extraction technical details
-- **[RECOMMENDATIONS.md](RECOMMENDATIONS.md)**: Implementation roadmap and best practices
+1. **Memory**: Use 4-bit quantization (`--use-4bit`) and LoRA (`--use-lora`) for 7B model
+2. **Batch size**: 4-8 with gradient accumulation
+3. **Response length**: Set to 512+ tokens for evidence chains (longer than Q&A)
+4. **Generations**: 8 per prompt for diversity
+5. **KL beta**: 0.01 prevents drift from base model
+6. **Debug**: Use `--debug-reward` to see component rewards
 
 ## Hardware Requirements
 
-**Minimum:**
-- GPU: 8GB VRAM (with optimizations)
-- RAM: 16GB
-- Storage: 50GB
-
-**Recommended:**
-- GPU: 24GB+ VRAM (A5000, A6000, A100)
-- RAM: 32GB
-- Storage: 100GB
-
-**Analysis Runtime:**
-- Basic (12 frames): ~10 minutes
-- Extended (30 frames): ~25 minutes
-- Full training: Days to weeks (depends on scale)
+- GPU: 40GB+ VRAM (A100/H100) for 8B model with 4-bit, or 4x V100 (16GB each)
+- CPU: 32+ cores for data loading
+- Storage: ~500GB for PLM-STC dataset + preprocessed data
 
 ## Citation
 
 If you use this work, please cite:
 
 ```bibtex
-@misc{mcot2026,
-  title={Motion Chain-of-Thought: Visual Token Analysis for Spatiotemporal Reasoning},
-  author={[Your Name]},
-  year={2026},
-  howpublished={\url{https://github.com/yourusername/vlmm-mcot}}
+@article{structured2026,
+  title={Structured Over Scale: Learning Spatial Reasoning from Educational Video},
+  author={Galoaa, Bishoy and Bai, Xiangyu and Ostadabbas, Sarah},
+  journal={arXiv preprint arXiv:2601.23251},
+  year={2026}
 }
 ```
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- **Qwen Team** for Qwen2-VL-7B-Instruct model
-- **HuggingFace** for Transformers library
-- **OpenAI** for inspiration on chain-of-thought reasoning
-
-## Contact
-
-For questions or collaboration:
-- Email: your.email@example.com
-- GitHub Issues: [Link to your repo]
-
----
-
-**Status**: ✅ Analysis Complete | 🚀 Ready for Implementation  
-**Last Updated**: February 4, 2026  
-**Confidence**: High (85%) - Strong evidence supports feasibility
+MIT License

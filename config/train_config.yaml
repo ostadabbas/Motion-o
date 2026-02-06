@@ -1,0 +1,34 @@
+# Training configuration
+
+# Model settings
+model_id: "Qwen/Qwen2-VL-2B-Instruct"
+cache_dir: null  # Set to path for model cache, or null for default
+use_4bit: true  # Use 4-bit quantization
+device: "cuda"  # Device: cuda, cpu
+dtype: "auto"  # Data type: auto, float16, bfloat16, float32
+
+# LoRA settings
+use_lora: true  # Use LoRA for parameter-efficient fine-tuning
+lora_r: 16  # LoRA rank
+lora_alpha: 32  # LoRA alpha
+lora_dropout: 0.1  # LoRA dropout
+
+# Training hyperparameters
+learning_rate: 2.0e-4
+batch_size: 1  # Per-device batch size
+gradient_accumulation_steps: 4  # Effective batch size = batch_size * gradient_accumulation_steps
+num_epochs: 10  # Increased from 3 for better learning
+warmup_steps: 100
+
+# Logging and saving
+logging_steps: 10
+save_steps: 500
+eval_steps: null  # Set to number for evaluation frequency, null to disable
+
+# Sequence length
+max_length: 2048  # Maximum input sequence length (increased for frame-based training)
+max_new_tokens: 64  # Maximum tokens to generate
+
+# Output
+output_dir: "./outputs"  # Output directory for trained models
+

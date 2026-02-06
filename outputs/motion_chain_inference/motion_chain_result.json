@@ -1,0 +1,30 @@
+{
+  "question": "Describe the motion trajectory of the red ball. Where does it start, where does it end, and how does it move across the scene? Provide spatial evidence with bounding boxes for each key position.",
+  "response": "Step 1: [0.0s-2.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> starts moving\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball begins moving from the left side of the frame\n\nStep 2: [2.0s-4.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 3: [4.0s-6.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 4: [6.0s-8.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 5: [8.0s-10.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 6: [10.0s-12.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 7: [12.0s-14.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 8: [14.0s-16.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 9: [16.0s-18.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 10: [18.0s-20.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.15 units/s toward right\nDescription: The red ball moves from the left side of the frame to the right side of the frame\n\nStep 11: [20.0s-22.0s] Ball <bbox>[0.15,0.45,0.25,0.55]</bbox> moves to the right\nMotion: Centroid at (0.20, 0.50), velocity 0.",
+  "metadata": {
+    "video_path": "test_videos/Ball_Animation_Video_Generation.mp4",
+    "model_id": "Qwen/Qwen2-VL-2B-Instruct",
+    "num_frames": 8,
+    "frame_indices": [
+      0,
+      27,
+      54,
+      81,
+      109,
+      136,
+      163,
+      191
+    ],
+    "video_metadata": {
+      "total_frames": 192,
+      "fps": 24.0,
+      "width": 1280,
+      "height": 720,
+      "duration": 8.0
+    },
+    "input_tokens": 9858,
+    "generated_tokens": 1024,
+    "max_tokens": 1024,
+    "provide_example": true
+  }
+}

@@ -1,0 +1,20 @@
+# Model configuration
+
+# Base model
+model_id: "Qwen/Qwen2-VL-2B-Instruct"
+
+# Device and precision
+device: "cuda"  # Options: cuda, cpu
+dtype: "auto"  # Options: auto, float16, bfloat16, float32
+use_4bit: true  # Use 4-bit quantization for memory efficiency
+
+# Cache settings
+cache_dir: null  # Path to cache directory, null for default
+# Default: "/media/olympus/zeus/hf_cache"
+# Example: "/media/olympus/zeus/hf_cache"
+
+# Generation settings (for inference)
+max_new_tokens: 32
+temperature: 0.3
+top_p: 0.9
+
