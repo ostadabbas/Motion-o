@@ -1,0 +1,23 @@
+==========================================
+SLURM Job Information
+==========================================
+Job ID: 628
+Job Name: motionr1_sft
+Node: journey
+Start Time: Sat Feb  7 06:08:54 PM EST 2026
+==========================================
+
+==========================================
+Training Configuration
+==========================================
+Model: Qwen/Qwen2.5-VL-7B-Instruct
+Dataset: /mnt/data/stgr/json_data/STGR-SFT-subset.json (5,696 samples)
+Output: outputs/sft_full_slurm_628
+GPUs: 4 (DeepSpeed ZeRO-2)
+Expected Duration: ~6-8 hours
+==========================================
+
+[INFO] Running in WANDB offline mode
+[INFO] Running in WANDB offline mode
+[INFO] Running in WANDB offline mode
+[INFO] Running in WANDB offline mode
