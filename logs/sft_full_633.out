@@ -1,0 +1,45 @@
+==========================================
+SLURM Job Information
+==========================================
+Job ID: 633
+Job Name: motionr1_sft
+Node: journey
+Start Time: Mon Feb  9 02:14:41 PM EST 2026
+==========================================
+
+==========================================
+Training Configuration
+==========================================
+Model: Qwen/Qwen2.5-VL-7B-Instruct
+Dataset: /mnt/data/stgr/json_data/STGR-SFT-subset-motion.json (5,696 samples with motion tags)
+Output: outputs/sft_full_slurm_633
+GPUs: 4 (DeepSpeed ZeRO-2)
+Expected Duration: ~6-8 hours
+==========================================
+
+[INFO] Running in WANDB offline mode
+[INFO] Running in WANDB offline mode
+[INFO] Running in WANDB offline mode
+[INFO] Running in WANDB offline mode
+[Rank 2] Model moved to cuda:2[Rank 3] Model moved to cuda:3
+[Rank 1] Model moved to cuda:1
+[Rank 0] Model moved to cuda:0
+
+Before initializing optimizer states
+MA 16.46 GB         Max_MA 19.31 GB         CA 19.32 GB         Max_CA 19 GB 
+CPU Virtual Memory:  used = 113.6 GB, percent = 45.2%
+After initializing optimizer states
+MA 16.46 GB         Max_MA 16.46 GB         CA 19.32 GB         Max_CA 19 GB 
+CPU Virtual Memory:  used = 119.64 GB, percent = 47.6%
+After initializing ZeRO optimizer
+MA 16.46 GB         Max_MA 16.46 GB         CA 19.32 GB         Max_CA 19 GB 
+CPU Virtual Memory:  used = 119.32 GB, percent = 47.5%
+{'loss': '3.803', 'grad_norm': '257.8', 'learning_rate': '9.93e-07', 'entropy': '2.635', 'num_tokens': '1.162e+05', 'mean_token_accuracy': '0.5372', 'epoch': '0.007022'}
+{'loss': '2.225', 'grad_norm': '114.9', 'learning_rate': '9.86e-07', 'entropy': '3.491', 'num_tokens': '2.312e+05', 'mean_token_accuracy': '0.6762', 'epoch': '0.01404'}
+{'loss': '1.665', 'grad_norm': '277.5', 'learning_rate': '9.789e-07', 'entropy': '4.066', 'num_tokens': '3.465e+05', 'mean_token_accuracy': '0.735', 'epoch': '0.02107'}
+{'loss': '1.309', 'grad_norm': '61.95', 'learning_rate': '9.719e-07', 'entropy': '4.925', 'num_tokens': '4.62e+05', 'mean_token_accuracy': '0.7793', 'epoch': '0.02809'}
+{'loss': '1.062', 'grad_norm': '42.64', 'learning_rate': '9.649e-07', 'entropy': '5.734', 'num_tokens': '5.766e+05', 'mean_token_accuracy': '0.8146', 'epoch': '0.03511'}
+{'loss': '0.9225', 'grad_norm': '15.95', 'learning_rate': '9.579e-07', 'entropy': '6.575', 'num_tokens': '6.912e+05', 'mean_token_accuracy': '0.8154', 'epoch': '0.04213'}
+{'loss': '0.8283', 'grad_norm': '11.54', 'learning_rate': '9.508e-07', 'entropy': '6.644', 'num_tokens': '8.058e+05', 'mean_token_accuracy': '0.8224', 'epoch': '0.04916'}
+{'loss': '0.749', 'grad_norm': '14.41', 'learning_rate': '9.438e-07', 'entropy': '6.156', 'num_tokens': '9.208e+05', 'mean_token_accuracy': '0.8289', 'epoch': '0.05618'}
+{'loss': '0.7196', 'grad_norm': '13.07', 'learning_rate': '9.368e-07', 'entropy': '6.378', 'num_tokens': '1.037e+06', 'mean_token_accuracy': '0.8312', 'epoch': '0.0632'}

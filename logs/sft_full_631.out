@@ -170,3 +170,18 @@ CPU Virtual Memory:  used = 129.83 GB, percent = 51.7%
 {'loss': '0.2868', 'grad_norm': '9.557', 'learning_rate': '5.899e-08', 'entropy': '1.119', 'num_tokens': '1.539e+07', 'mean_token_accuracy': '0.9129', 'epoch': '0.941'}
 {'loss': '0.2846', 'grad_norm': '8.255', 'learning_rate': '5.197e-08', 'entropy': '1.085', 'num_tokens': '1.55e+07', 'mean_token_accuracy': '0.9107', 'epoch': '0.948'}
 {'loss': '0.2795', 'grad_norm': '6.27', 'learning_rate': '4.494e-08', 'entropy': '1.089', 'num_tokens': '1.561e+07', 'mean_token_accuracy': '0.9126', 'epoch': '0.9551'}
+{'loss': '0.2738', 'grad_norm': '6.557', 'learning_rate': '3.792e-08', 'entropy': '1.087', 'num_tokens': '1.573e+07', 'mean_token_accuracy': '0.9154', 'epoch': '0.9621'}
+{'loss': '0.2894', 'grad_norm': '19.98', 'learning_rate': '3.09e-08', 'entropy': '1.037', 'num_tokens': '1.584e+07', 'mean_token_accuracy': '0.9102', 'epoch': '0.9691'}
+{'loss': '0.2824', 'grad_norm': '29.71', 'learning_rate': '2.388e-08', 'entropy': '1.071', 'num_tokens': '1.596e+07', 'mean_token_accuracy': '0.9106', 'epoch': '0.9761'}
+{'loss': '0.3049', 'grad_norm': '7.338', 'learning_rate': '1.685e-08', 'entropy': '1.108', 'num_tokens': '1.607e+07', 'mean_token_accuracy': '0.9072', 'epoch': '0.9831'}
+{'loss': '0.2706', 'grad_norm': '6.494', 'learning_rate': '9.831e-09', 'entropy': '1.084', 'num_tokens': '1.618e+07', 'mean_token_accuracy': '0.9151', 'epoch': '0.9902'}
+{'loss': '0.2824', 'grad_norm': '7.458', 'learning_rate': '2.809e-09', 'entropy': '1.1', 'num_tokens': '1.63e+07', 'mean_token_accuracy': '0.9128', 'epoch': '0.9972'}
+{'train_runtime': '8.484e+04', 'train_samples_per_second': '0.067', 'train_steps_per_second': '0.017', 'train_loss': '0.4002', 'entropy': '1.059', 'num_tokens': '1.634e+07', 'mean_token_accuracy': '0.9109', 'epoch': '1'}
+
+==========================================
+Job Complete!
+==========================================
+Exit Code: 0
+End Time: Sun Feb  8 05:52:58 PM EST 2026
+Model saved to: outputs/sft_full_slurm_631
+==========================================

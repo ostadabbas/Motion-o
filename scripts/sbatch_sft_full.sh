@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:4
 #SBATCH --mem=128G
-#SBATCH --time=120:00:00
+#SBATCH --time=167:59:00
 #SBATCH --partition=journey_gpu
 
 echo "=========================================="
@@ -46,16 +46,48 @@ MODEL_PATH="Qwen/Qwen2.5-VL-7B-Instruct"
 EXP_NAME="sft_full_slurm_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/mnt/data/stgr"
-DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset.json"
+SOURCE_DATASET="${DATA_ROOT}/json_data/STGR-SFT-subset.json"
+DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset-motion.json"
+
+# Auto-augment data with motion tags if not already done
+if [ ! -f "$DATASET_JSON" ]; then
+    echo "=========================================="
+    echo "Motion-augmented dataset not found!"
+    echo "Running data augmentation first..."
+    echo "=========================================="
+    echo "Source: $SOURCE_DATASET"
+    echo "Output: $DATASET_JSON"
+    echo ""
+    
+    python scripts/augment_motion_data_simple.py \
+        --input "$SOURCE_DATASET" \
+        --output "$DATASET_JSON"
+    
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "✓ Data augmentation complete!"
+        echo ""
+    else
+        echo "ERROR: Data augmentation failed!"
+        exit 1
+    fi
+else
+    echo "=========================================="
+    echo "Using existing motion-augmented dataset"
+    echo "=========================================="
+    echo "Dataset: $DATASET_JSON"
+    echo ""
+fi
 
 echo "=========================================="
-echo "Training Configuration"
+echo "SFT Training Configuration"
 echo "=========================================="
 echo "Model: $MODEL_PATH"
-echo "Dataset: $DATASET_JSON (5,696 samples)"
+echo "Dataset: $DATASET_JSON"
 echo "Output: $OUT_DIR"
 echo "GPUs: 4 (DeepSpeed ZeRO-2)"
 echo "Expected Duration: ~6-8 hours"
+echo "Time Limit: 7 days (167:59:00)"
 echo "=========================================="
 echo ""
 

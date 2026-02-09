@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:4
 #SBATCH --mem=128G
-#SBATCH --time=120:00:00
+#SBATCH --time=167:59:00
 #SBATCH --partition=journey_gpu
 
 echo "=========================================="
