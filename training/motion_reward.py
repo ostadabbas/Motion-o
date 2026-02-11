@@ -187,17 +187,13 @@ def motion_trajectory_reward(completions, **kwargs):
             # Compute motion metrics
             
             # 1. Direction similarity (displacement vectors)
-            pred_centroids = [compute_bbox_centroid(bbox) for bbox in pred_bboxes]
-            gt_centroids = [compute_bbox_centroid(bbox) for bbox in gt_bboxes]
+            # Compute centroid trajectories
+            pred_trajectory = compute_centroid_trajectory(pred_bboxes)
+            gt_trajectory = compute_centroid_trajectory(gt_bboxes)
             
-            pred_displacements = [
-                compute_displacement_vector(pred_centroids[i], pred_centroids[i+1])
-                for i in range(len(pred_centroids) - 1)
-            ]
-            gt_displacements = [
-                compute_displacement_vector(gt_centroids[i], gt_centroids[i+1])
-                for i in range(len(gt_centroids) - 1)
-            ]
+            # Compute displacement vectors
+            pred_displacements = compute_displacement_vectors(pred_trajectory)
+            gt_displacements = compute_displacement_vectors(gt_trajectory)
             
             if not pred_displacements or not gt_displacements:
                 motion_rewards.append(0.0)
@@ -206,40 +202,32 @@ def motion_trajectory_reward(completions, **kwargs):
             
             # Match predicted and GT displacements (use min length)
             min_len = min(len(pred_displacements), len(gt_displacements))
-            direction_score = compute_direction_similarity(
+            direction_score = direction_cosine_similarity(
                 pred_displacements[:min_len],
                 gt_displacements[:min_len]
             )
             
-            # 2. Speed fidelity (velocity magnitude)
-            pred_speeds = []
-            for i in range(len(pred_times) - 1):
-                dt = pred_times[i+1] - pred_times[i]
-                if dt > 0:
-                    dx, dy = pred_displacements[i] if i < len(pred_displacements) else (0, 0)
-                    speed = np.sqrt(dx**2 + dy**2) / dt
-                    pred_speeds.append(speed)
+            # 2. Speed fidelity (velocity magnitude matching)
+            speed_score = speed_fidelity_score(
+                pred_displacements[:min_len],
+                gt_displacements[:min_len]
+            )
             
-            gt_speeds = []
-            for i in range(len(gt_times) - 1):
-                dt = gt_times[i+1] - gt_times[i]
-                if dt > 0:
-                    dx, dy = gt_displacements[i] if i < len(gt_displacements) else (0, 0)
-                    speed = np.sqrt(dx**2 + dy**2) / dt
-                    gt_speeds.append(speed)
-            
-            if pred_speeds and gt_speeds:
-                avg_pred_speed = np.mean(pred_speeds)
-                avg_gt_speed = np.mean(gt_speeds)
-                speed_score = compute_speed_fidelity(avg_pred_speed, avg_gt_speed)
+            # 3. Trajectory smoothness (penalty for implausible jumps)
+            # Estimate FPS from time differences
+            if len(pred_times) > 1:
+                avg_time_diff = np.mean([pred_times[i+1] - pred_times[i] 
+                                        for i in range(len(pred_times)-1)])
+                estimated_fps = 1.0 / avg_time_diff if avg_time_diff > 0 else 30.0
             else:
-                speed_score = 0.0
+                estimated_fps = fps
             
-            # 3. Trajectory smoothness (acceleration penalty)
-            if len(pred_speeds) > 1:
-                smoothness_score = compute_trajectory_smoothness(pred_speeds)
-            else:
-                smoothness_score = 0.0
+            smoothness_penalty = trajectory_smoothness_penalty(
+                pred_trajectory, 
+                fps=estimated_fps,
+                max_speed_px_per_sec=500.0
+            )
+            smoothness_score = 1.0 - smoothness_penalty  # Convert penalty to score
             
             # Combine motion components (weighted average)
             motion_reward = (
@@ -251,6 +239,14 @@ def motion_trajectory_reward(completions, **kwargs):
             # Clamp to [0, 1]
             motion_reward = max(0.0, min(1.0, float(motion_reward)))
             motion_rewards.append(motion_reward)
+            
+            # Debug output if requested
+            if kwargs.get('debug', False):
+                print(f"\n[Motion Reward Debug - Sample {idx}]")
+                print(f"  Direction score: {direction_score:.4f}")
+                print(f"  Speed score: {speed_score:.4f}")
+                print(f"  Smoothness score: {smoothness_score:.4f}")
+                print(f"  Final motion reward: {motion_reward:.4f}")
         
         except Exception as e:
             # Debug: print error but continue

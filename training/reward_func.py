@@ -7,7 +7,7 @@ from rouge_score import rouge_scorer
 import ast
 
 # Import motion trajectory reward
-from motion_reward import motion_trajectory_reward
+from training.motion_reward import motion_trajectory_reward
 
 # ans_acc_reward
 # ans_tiou_reward

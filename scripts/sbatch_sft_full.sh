@@ -47,7 +47,7 @@ EXP_NAME="sft_full_slurm_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/mnt/data/stgr"
 SOURCE_DATASET="${DATA_ROOT}/json_data/STGR-SFT-subset.json"
-DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset-motion.json"
+DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset-motion-v3.json"
 
 # Auto-augment data with motion tags if not already done
 if [ ! -f "$DATASET_JSON" ]; then

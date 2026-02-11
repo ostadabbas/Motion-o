@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-Simplified Motion Chain of Thought (MCoT) Data Augmentation Script.
+Ablation 7: Motion tags with path metadata.
 
-No external dependencies beyond json - computes motion inline.
+Adds trajectory metadata (keyframe count, duration) to motion tags.
+Minimal change, low token overhead, easy to implement.
+
+Example output:
+  <motion>rightward motion (speed: 0.141 units/s, accel: +0.000 units/s², path: 3 keyframes, 2.0s duration)</motion>
 """
 
 import json
@@ -90,11 +94,9 @@ def compute_direction_speed_acceleration(bboxes: List[List[float]],
     # Compute average speed
     avg_speed = total_distance / total_time if total_time > 0 else 0.0
     
-    # Compute acceleration (change in speed over time)
+    # Compute acceleration
     acceleration = 0.0
     if len(speeds) >= 2:
-        # Linear regression on speed over time to get acceleration
-        # Simple approach: (final_speed - initial_speed) / total_time
         speed_change = speeds[-1] - speeds[0]
         time_span = sum(timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1))
         if time_span > 0:
@@ -103,73 +105,38 @@ def compute_direction_speed_acceleration(bboxes: List[List[float]],
     return (direction, avg_speed, acceleration)
 
 
-def compute_trajectory_jitter(bboxes: List[List[float]], 
-                              timestamps: List[float]) -> float:
+def generate_motion_text_with_metadata(bboxes: List[List[float]], 
+                                        timestamps: List[float]) -> str:
     """
-    Compute trajectory jitter/noise as standard deviation of direction changes.
-    Lower values = smoother trajectory.
+    Generate motion description with trajectory metadata.
     
-    Returns:
-        jitter_score (0.0 = perfectly smooth, higher = more erratic)
+    ABLATION 7: Adds keyframe count and duration to motion tag.
     """
-    if len(bboxes) < 3:
-        return 0.0
-    
-    centroids = [compute_centroid(bbox) for bbox in bboxes]
-    
-    # Compute direction changes (angular deviations)
-    direction_changes = []
-    for i in range(len(centroids) - 2):
-        cx1, cy1 = centroids[i]
-        cx2, cy2 = centroids[i + 1]
-        cx3, cy3 = centroids[i + 2]
-        
-        # Vectors
-        v1x, v1y = cx2 - cx1, cy2 - cy1
-        v2x, v2y = cx3 - cx2, cy3 - cy2
-        
-        # Magnitude
-        mag1 = math.sqrt(v1x**2 + v1y**2)
-        mag2 = math.sqrt(v2x**2 + v2y**2)
-        
-        if mag1 > 0.01 and mag2 > 0.01:
-            # Cosine similarity
-            cos_sim = (v1x * v2x + v1y * v2y) / (mag1 * mag2)
-            cos_sim = max(-1.0, min(1.0, cos_sim))
-            angle_change = math.acos(cos_sim)
-            direction_changes.append(angle_change)
-    
-    if not direction_changes:
-        return 0.0
-    
-    # Standard deviation of direction changes
-    mean_change = sum(direction_changes) / len(direction_changes)
-    variance = sum((x - mean_change) ** 2 for x in direction_changes) / len(direction_changes)
-    jitter = math.sqrt(variance)
-    
-    return jitter
-
-
-def generate_motion_text(bboxes: List[List[float]], 
-                         timestamps: List[float]) -> str:
-    """Generate natural language motion description with direction, speed, and acceleration."""
     if not bboxes or len(bboxes) == 0:
         return "no tracking data"
     
     if len(bboxes) == 1:
         return "stationary (single frame)"
     
-    # Compute direction, speed, and acceleration
+    # Compute direction, speed, acceleration
     direction, avg_speed, acceleration = compute_direction_speed_acceleration(bboxes, timestamps)
     
     if direction == "stationary":
         return "stationary (no significant motion)"
     
-    # Format motion text with numerical metrics
-    speed_str = f"{avg_speed:.3f}"
-    accel_str = f"{acceleration:+.3f}"  # + prefix for positive, - for negative
+    # Trajectory metadata
+    num_keyframes = len(bboxes)
+    duration = timestamps[-1] - timestamps[0]
     
-    motion_text = f"{direction} motion (speed: {speed_str} units/s, accel: {accel_str} units/s²)"
+    # Format motion text with metadata
+    speed_str = f"{avg_speed:.3f}"
+    accel_str = f"{acceleration:+.3f}"
+    
+    motion_text = (
+        f"{direction} motion "
+        f"(speed: {speed_str} units/s, accel: {accel_str} units/s², "
+        f"path: {num_keyframes} keyframes, {duration:.1f}s duration)"
+    )
     
     return motion_text
 
@@ -227,7 +194,7 @@ def insert_motion_tag(reasoning_process: str, object_name: str, motion_text: str
 
 
 def augment_sample(sample: Dict) -> Dict:
-    """Augment a single sample with motion tags."""
+    """Augment a single sample with motion tags (Ablation 7 variant)."""
     task = sample.get('task', '')
     if task not in ["temporal-spatial free-form QA", "General video QA Free-form", "General video QA MCQ"]:
         return sample
@@ -250,10 +217,9 @@ def augment_sample(sample: Dict) -> Dict:
         bboxes = [bbox for bbox, _ in trajectory_data]
         timestamps = [ts for _, ts in trajectory_data]
         
-        # CRITICAL FIX: Only add motion tags for multi-frame trajectories
-        # Single-frame objects don't provide motion signal for training
+        # Only add motion tags for multi-frame trajectories
         if len(bboxes) >= 2:
-            motion_text = generate_motion_text(bboxes, timestamps)
+            motion_text = generate_motion_text_with_metadata(bboxes, timestamps)
             augmented_reasoning = insert_motion_tag(augmented_reasoning, object_name, motion_text)
     
     augmented_sample = sample.copy()
@@ -263,75 +229,64 @@ def augment_sample(sample: Dict) -> Dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Augment STGR dataset with MCoT tags")
-    parser.add_argument('--input', type=str, default='/mnt/data/stgr/json_data/STGR-SFT.json')
+    parser = argparse.ArgumentParser(description="Ablation 7: Motion tags with path metadata")
+    parser.add_argument('--input', type=str, default='/mnt/data/stgr/json_data/STGR-SFT-subset.json')
     parser.add_argument('--output', type=str, default=None)
     parser.add_argument('--samples', type=int, default=None)
-    parser.add_argument('--output-suffix', type=str, default='-motion')
-    parser.add_argument('--inspect', type=int, default=0)
     
     args = parser.parse_args()
     
     # Determine output path
     if args.output is None:
         input_path = Path(args.input)
-        output_name = input_path.stem + args.output_suffix + input_path.suffix
-        output_path = input_path.parent / output_name
+        output_path = input_path.parent / f"{input_path.stem}-ablation7{input_path.suffix}"
     else:
         output_path = Path(args.output)
     
     print(f"Loading data from {args.input}...")
-    with open(args.input, 'r') as f:
+    with open(args.input) as f:
         data = json.load(f)
     
-    total_samples = len(data)
-    samples_to_process = min(args.samples, total_samples) if args.samples else total_samples
-    
-    print(f"Processing {samples_to_process} samples (out of {total_samples})...")
+    num_samples = args.samples if args.samples else len(data)
+    print(f"Processing {num_samples} samples (out of {len(data)})...")
     
     augmented_data = []
     augmented_count = 0
     
-    for i, sample in enumerate(data[:samples_to_process]):
-        if (i + 1) % 100 == 0:
-            print(f"  Processed {i + 1}/{samples_to_process} samples...")
+    for i, sample in enumerate(data[:num_samples]):
+        augmented = augment_sample(sample)
+        augmented_data.append(augmented)
         
-        augmented_sample = augment_sample(sample)
-        augmented_data.append(augmented_sample)
-        
-        if augmented_sample.get('reasoning_process') != sample.get('reasoning_process'):
+        if augmented['reasoning_process'] != sample['reasoning_process']:
             augmented_count += 1
+        
+        if (i + 1) % 100 == 0:
+            print(f"  Processed {i+1}/{num_samples} samples...")
     
     print(f"\nAugmentation complete!")
-    print(f"  Total samples: {samples_to_process}")
+    print(f"  Total samples: {len(augmented_data)}")
     print(f"  Augmented samples: {augmented_count}")
-    print(f"  Unchanged samples: {samples_to_process - augmented_count}")
+    print(f"  Unchanged samples: {len(augmented_data) - augmented_count}")
     
     print(f"\nSaving augmented data to {output_path}...")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, 'w') as f:
         json.dump(augmented_data, f, indent=2)
     
     print("Done!")
     
-    # Inspection
-    if args.inspect > 0:
-        print(f"\n{'='*80}")
-        print(f"Inspecting first {args.inspect} augmented samples:")
-        print('='*80)
-        
-        for i, sample in enumerate(augmented_data[:args.inspect]):
-            print(f"\n--- Sample {i+1} ---")
-            print(f"ID: {sample.get('id', 'N/A')}")
-            print(f"Task: {sample.get('task', 'N/A')}")
-            print(f"Question: {sample.get('question', 'N/A')[:100]}...")
-            print(f"\nReasoning Process:")
-            reasoning = sample.get('reasoning_process', 'N/A')
-            print(reasoning[:800])
-            if len(reasoning) > 800:
-                print("...")
-            print()
+    # Show example
+    print("\n" + "="*70)
+    print("EXAMPLE OUTPUT (Ablation 7 - Path Metadata):")
+    print("="*70)
+    for sample in augmented_data[:10]:
+        if '<motion>' in sample['reasoning_process']:
+            motion_tags = re.findall(r'<motion>([^<]+)</motion>', sample['reasoning_process'])
+            if motion_tags:
+                print(f"\nSample: {sample['question'][:60]}...")
+                print(f"Motion tag:")
+                print(f"  <motion>{motion_tags[0]}</motion>")
+                break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

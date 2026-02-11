@@ -28,7 +28,7 @@ OUT_DIR="outputs/${EXP_NAME}"
 
 # Use filtered subset dataset
 DATA_ROOT="/mnt/data/stgr"
-DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset.json"
+DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset-motion-v3.json"
 
 echo "=========================================="
 echo "Starting FULL SFT Training (DeepSpeed ZeRO-2)"
