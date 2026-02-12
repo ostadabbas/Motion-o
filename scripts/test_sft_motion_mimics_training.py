@@ -121,7 +121,7 @@ def test_sft_motion_generation():
         torch.cuda.empty_cache()
     
     # Load model
-    model_path = "outputs/sft_full_slurm_633"
+    model_path = "outputs/sft_full_slurm_639"  # ← UPDATED to latest model
     print(f"\n1. Loading SFT model: {model_path}")
     
     # GPU 0 = GTX 745 (4GB), GPUs 1-4 = V100 (32GB)
@@ -143,7 +143,7 @@ def test_sft_motion_generation():
     
     # Load sample
     print("\n2. Loading sample from SFT dataset...")
-    dataset_path = os.path.join(DATA_ROOT, "json_data/STGR-SFT-subset-motion.json")
+    dataset_path = os.path.join(DATA_ROOT, "json_data/STGR-SFT-subset-motion-v3.json")  # ← v3 dataset
     
     with open(dataset_path) as f:
         data = json.load(f)
