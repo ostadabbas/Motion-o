@@ -1,0 +1,28 @@
+I'm working on MotionR1: adding motion reasoning to a video VLM (Open-o3-Video style) with explicit <motion> tags (direction, speed) and a motion_trajectory reward in GRPO.
+
+We've fixed several issues and training is running, but I want a full pipeline review to catch anything subtle we might have missed.
+
+**Current pipeline**
+- SFT: STGR-SFT-subset-motion-v3.json (5.7k samples, 87.5% multi-frame). Model learns <think> with <obj><box>at<t></t>s and <motion>direction (speed: X)</motion>.
+- GRPO: STGR-RL-subset.json (5.8k samples). No reasoning_process in data; model generates <think> from scratch. Rewards get GT via kwargs: key_items, key_frames, answer, task, image_size (trainer passes all input columns except prompt/completion).
+- Motion reward (simplified): (1) Match each predicted <obj><box>at<t> claim to closest GT frame (Open-o3 style). (2) If >=2 matches span different GT frames, parse direction from <motion> text and compute GT direction from GT bboxes; direction_score = 1.0 if pred_direction == gt_direction else 0.0. (3) Speed score = ratio of pred vs GT displacement magnitude over time. (4) motion_reward = 0.5 * direction_score + 0.5 * speed_score. No smoothness/accel term.
+
+**Things we already fixed**
+- GRPO was using STGR-RL-subset (0% samples with >=2 key_frames). We made motion reward work with sparse GT by matching each prediction to closest GT frame (like thk_spatial_reward); GT key_items can have multiple frames even when key_frames lists one.
+- Motion reward was 0 always; now it's non-zero (~0.007–0.01) in logs.
+- We removed cosine-similarity direction in favor of simple word matching (parse "upward"/"leftward" etc. from <motion> text; compute GT direction from bboxes; exact string match).
+
+**What I need you to do**
+- Review the full pipeline for subtle bugs or inconsistencies: data (SFT vs RL), reward signatures and kwargs, frame/time matching, coordinate systems (normalized vs pixel), direction and speed logic, edge cases (e.g. missing <motion>, single-frame matches, empty key_items).
+- Check that reward aggregation (sum of rewards, logging) and training step (loss, KL) are consistent with Open-o3 and that motion_trajectory is integrated correctly.
+- Don't change code unless you find a real bug; focus on analysis and a short report of "looks correct" vs "potential issue: ..." with file/line or logic references where relevant.
+
+**Key files**
+- training/motion_reward.py (motion_trajectory_reward, parse_motion_direction, compute_direction_from_bboxes)
+- training/grpo_trainer.py (reward_kwargs construction, reward loop, logging)
+- training/reward_func.py (other rewards; motion_trajectory imported from motion_reward)
+- training/train_grpo.py (reward_funcs list including motion_trajectory)
+- scripts/sbatch_grpo_motion_full.sh (dataset path, reward_funcs arg)
+- STGR-RL-subset: key_frames (list of {idx, time}), key_items (dict frame_idx -> {object_name: [bbox]}), image_size sometimes empty in samples
+
+Start by tracing one full path: one RL sample -> prompt/completion -> motion_trajectory_reward call with kwargs -> direction and speed computation -> returned reward. Then generalize to edge cases and other rewards.

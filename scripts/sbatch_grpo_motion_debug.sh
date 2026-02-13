@@ -1,83 +1,62 @@
 #!/bin/bash
-#SBATCH --job-name=motionr1_grpo_motion
-#SBATCH --output=logs/grpo_motion_full_%j.out
-#SBATCH --error=logs/grpo_motion_full_%j.err
+#SBATCH --job-name=motion_debug
+#SBATCH --output=logs/grpo_motion_debug_%j.out
+#SBATCH --error=logs/grpo_motion_debug_%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=32
-#SBATCH --gres=gpu:4
-#SBATCH --mem=128G
-#SBATCH --time=167:59:00
+#SBATCH --cpus-per-task=8
+#SBATCH --gres=gpu:1
+#SBATCH --mem=48G
+#SBATCH --time=0:45:00
 #SBATCH --partition=journey_gpu
 
 echo "=========================================="
-echo "SLURM Job Information"
+echo "SLURM DEBUG JOB (QUICK_TEST)"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
-echo "Job Name: $SLURM_JOB_NAME"
-echo "Node: $SLURM_NODELIST"
 echo "Start Time: $(date)"
 echo "=========================================="
-echo ""
 
-# Navigate to project directory
 cd /home/bi.ga/Workspace/vlmm-mcot
 
-# Activate conda environment
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate dora_cuda
 
-# Add workspace to Python path
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+export WANDB_MODE="offline"
 
-export WANDB_MODE="online"
-
-# FULL TRAINING MODE
-export QUICK_TEST="false"
-
-# Memory optimization
+# Reuse existing QUICK_TEST - train_grpo.py will .select(max_samples) from dataset
+export QUICK_TEST="true"
+export MAX_SAMPLES="10"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export CUDA_LAUNCH_BLOCKING=0
+export CUDA_LAUNCH_BLOCKING=1
 
-# Configuration - use this SFT checkpoint (override with SFT_CHECKPOINT=path sbatch ...)
-MODEL_PATH="${SFT_CHECKPOINT:-outputs/sft_full_slurm_639}"
-if [ ! -d "$MODEL_PATH" ]; then
-    MODEL_PATH=$(ls -td outputs/sft_full_* 2>/dev/null | head -1)
-fi
-if [ -z "$MODEL_PATH" ] || [ ! -d "$MODEL_PATH" ]; then
-    echo "ERROR: No SFT checkpoint found at $MODEL_PATH. Run SFT first or set SFT_CHECKPOINT=path."
-    exit 1
-fi
+MODEL_PATH=$(ls -td outputs/sft_full_* 2>/dev/null | head -1)
+[ -z "$MODEL_PATH" ] && MODEL_PATH=$(ls -td outputs/sft_* 2>/dev/null | head -1)
+[ -z "$MODEL_PATH" ] && { echo "ERROR: No SFT checkpoint"; exit 1; }
 
-EXP_NAME="rl_motion_full_slurm_${SLURM_JOB_ID}"
+EXP_NAME="rl_motion_debug_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/mnt/data/stgr"
 DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-subset.json"
-
-echo "=========================================="
-echo "Training Configuration (MotionR1)"
-echo "=========================================="
-echo "Model: $MODEL_PATH"
-echo "Dataset: $DATASET_JSON (5,819 samples) ⭐ Motion reward works with sparse GT!"
-echo "Output: $OUT_DIR"
-echo "Rewards: Including motion_trajectory ⭐"
-echo "GPUs: 4 (DeepSpeed ZeRO-2 + LoRA)"
-echo "Expected Duration: ~8-12 hours"
-echo "=========================================="
-echo ""
-
-# Create logs directory if it doesn't exist
 mkdir -p logs
 
-# MotionR1 GRPO training WITH motion_trajectory reward
-srun torchrun --nproc_per_node=4 \
+echo "=========================================="
+echo "QUICK_TEST: 10 samples, 1 GPU"
+echo "=========================================="
+echo "Model: $MODEL_PATH"
+echo "Dataset: $DATASET_JSON"
+echo "Output: $OUT_DIR"
+echo "=========================================="
+
+srun torchrun --nproc_per_node=1 \
     --nnodes=1 \
     --node_rank=0 \
     --master_addr=127.0.0.1 \
-    --master_port=12321 \
+    --master_port=12345 \
     training/train_grpo.py \
-    --output_dir $OUT_DIR \
-    --model_name_or_path $MODEL_PATH \
+    --output_dir "$OUT_DIR" \
+    --model_name_or_path "$MODEL_PATH" \
     --dataset_name "$DATASET_JSON" \
     --deepspeed configs/zero2.json \
     --use_peft true \
@@ -88,18 +67,19 @@ srun torchrun --nproc_per_node=4 \
     --max_prompt_length 16384 \
     --max_completion_length 768 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 2 \
+    --gradient_accumulation_steps 1 \
     --learning_rate 1e-6 \
     --lr_scheduler_type cosine \
     --weight_decay 0.01 \
     --bf16 true \
-    --logging_steps 10 \
+    --logging_steps 1 \
     --gradient_checkpointing true \
     --attn_implementation eager \
     --max_pixels 401408 \
     --num_train_epochs 1 \
-    --run_name $EXP_NAME \
-    --save_steps 500 \
+    --max_steps 20 \
+    --run_name "$EXP_NAME" \
+    --save_steps 10 \
     --beta 0.04 \
     --max_grad_norm 5 \
     --save_only_model true \
@@ -107,14 +87,10 @@ srun torchrun --nproc_per_node=4 \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
 EXIT_CODE=$?
-
 echo ""
 echo "=========================================="
-echo "Job Complete!"
+echo "DEBUG JOB END"
 echo "=========================================="
 echo "Exit Code: $EXIT_CODE"
 echo "End Time: $(date)"
-echo "Model saved to: $OUT_DIR"
-echo "=========================================="
-
 exit $EXIT_CODE

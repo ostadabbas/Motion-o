@@ -41,7 +41,7 @@ export QUICK_TEST="false"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export CUDA_LAUNCH_BLOCKING=0
 
-# Configuration
+# Configuration - subset only (filtered to available videos)
 MODEL_PATH="Qwen/Qwen2.5-VL-7B-Instruct"
 EXP_NAME="sft_full_slurm_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"

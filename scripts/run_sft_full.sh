@@ -21,12 +21,10 @@ export QUICK_TEST="false"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export CUDA_LAUNCH_BLOCKING=0
 
-# Configuration
+# Configuration - subset only (filtered to available videos)
 MODEL_PATH="Qwen/Qwen2.5-VL-7B-Instruct"  # HuggingFace model
 EXP_NAME="sft_full_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="outputs/${EXP_NAME}"
-
-# Use filtered subset dataset
 DATA_ROOT="/mnt/data/stgr"
 DATASET_JSON="${DATA_ROOT}/json_data/STGR-SFT-subset-motion-v3.json"
 
@@ -34,7 +32,7 @@ echo "=========================================="
 echo "Starting FULL SFT Training (DeepSpeed ZeRO-2)"
 echo "=========================================="
 echo "Model: $MODEL_PATH"
-echo "Dataset: $DATASET_JSON (5,696 samples)"
+echo "Dataset: $DATASET_JSON"
 echo "Output: $OUT_DIR"
 echo "GPUs: 4 (0,1,2,3)"
 echo "DeepSpeed: configs/zero2.json"
