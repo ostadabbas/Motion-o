@@ -4,18 +4,37 @@ Download STGR dataset from HuggingFace.
 
 Dataset: marinero4972/Open-o3-Video (~48.7 GB)
 Includes: JSON annotations + video files
+
+Recent change (2026-02): HuggingFace repo now packages some
+videos as zip files (e.g., videos/stgr.zip, videos/videoespresso/kfs.zip).
+This script now automatically extracts any .zip / .tar(.gz) archives
+after download so you get the expected directory layout.
 """
 
 import os
 import json
 import argparse
+import zipfile
+import tarfile
 from pathlib import Path
 from huggingface_hub import snapshot_download, login
+
+
+def _is_already_downloaded(output_path: Path, json_only: bool) -> bool:
+    """Return True if the dataset appears to be already present (skip download)."""
+    json_dir = output_path / "json_data"
+    if json_only:
+        return (json_dir / "STGR-SFT.json").exists() and (json_dir / "STGR-RL.json").exists()
+    return json_dir.exists() and (output_path / "videos").exists()
 
 
 def download_dataset(output_dir: str, json_only: bool = False, token: str = None):
     """
     Download STGR dataset from HuggingFace.
+    
+    If the dataset is already present (json_data/ and videos/ for full,
+    or both JSON files for --json-only), skips download and only runs
+    extraction and verification.
     
     Args:
         output_dir: Directory to save dataset (e.g., /mnt/data/stgr)
@@ -26,7 +45,7 @@ def download_dataset(output_dir: str, json_only: bool = False, token: str = None
     output_path.mkdir(parents=True, exist_ok=True)
     
     print("=" * 70)
-    print("Downloading STGR Dataset from HuggingFace")
+    print("STGR Dataset from HuggingFace")
     print("=" * 70)
     print(f"Repository: marinero4972/Open-o3-Video")
     print(f"Output directory: {output_path.absolute()}")
@@ -34,59 +53,128 @@ def download_dataset(output_dir: str, json_only: bool = False, token: str = None
     print("=" * 70)
     print()
     
-    # Login if token provided
-    if token:
-        print("Logging in to HuggingFace...")
-        login(token=token)
-        print("✅ Logged in successfully")
-        print()
+    already = _is_already_downloaded(output_path, json_only)
     
-    try:
-        if json_only:
-            print("Downloading JSON annotations only...")
-            print("(This is fast - just a few hundred MB)")
+    if already:
+        print("✅ Data already present — skipping download.")
+        print("   Extracting archives (if any) and verifying...")
+        print()
+    else:
+        # Login if token provided
+        if token:
+            print("Logging in to HuggingFace...")
+            login(token=token)
+            print("✅ Logged in successfully")
             print()
-            snapshot_download(
-                repo_id="marinero4972/Open-o3-Video",
-                repo_type="dataset",
-                local_dir=str(output_path),
-                allow_patterns=["json_data/*"],
-                resume_download=True,
-            )
-        else:
-            print("Downloading full dataset (48.7 GB)...")
-            print("(This may take 30 mins - 2 hours depending on your connection)")
+        
+        try:
+            if json_only:
+                print("Downloading JSON annotations only...")
+                print("(This is fast - just a few hundred MB)")
+                print()
+                snapshot_download(
+                    repo_id="marinero4972/Open-o3-Video",
+                    repo_type="dataset",
+                    local_dir=str(output_path),
+                    allow_patterns=["json_data/*"],
+                    resume_download=True,
+                )
+            else:
+                print("Downloading full dataset (48.7 GB)...")
+                print("(This may take 30 mins - 2 hours depending on your connection)")
+                print()
+                snapshot_download(
+                    repo_id="marinero4972/Open-o3-Video",
+                    repo_type="dataset",
+                    local_dir=str(output_path),
+                    resume_download=True,
+                )
+            
             print()
-            snapshot_download(
-                repo_id="marinero4972/Open-o3-Video",
-                repo_type="dataset",
-                local_dir=str(output_path),
-                resume_download=True,
-            )
-        
+            print("=" * 70)
+            print("✅ Download Complete!")
+            print("=" * 70)
+            print()
+        except Exception as e:
+            print()
+            print("=" * 70)
+            print("❌ Download Failed!")
+            print("=" * 70)
+            print(f"Error: {e}")
+            print()
+            print("Possible solutions:")
+            print("1. Check your internet connection")
+            print("2. Login to HuggingFace: huggingface-cli login")
+            print("3. Verify repo access: https://huggingface.co/datasets/marinero4972/Open-o3-Video")
+            print("4. Try again with --json-only first to test")
+            print()
+            raise
+    
+    # Always run extraction (no-op if no archives) and verification
+    extract_archives(output_path)
+    verify_download(output_path)
+
+
+def extract_archives(data_root: Path) -> None:
+    """
+    Extract any .zip / .tar / .tar.gz archives under data_root.
+
+    This is mainly for cases where the HuggingFace dataset stores
+    videos as zip files (e.g., videos/stgr.zip).
+    """
+    print("=" * 70)
+    print("Checking for archive files to extract...")
+    print("=" * 70)
+    print()
+
+    archives: list[tuple[str, Path]] = []
+
+    # Collect archives
+    for p in data_root.rglob("*.zip"):
+        archives.append(("zip", p))
+    for p in data_root.rglob("*.tar.gz"):
+        archives.append(("tar.gz", p))
+    for p in data_root.rglob("*.tar"):
+        # Avoid double-counting .tar.gz which we already added
+        if not str(p).endswith(".tar.gz"):
+            archives.append(("tar", p))
+
+    if not archives:
+        print("✅ No archive files found (dataset already extracted).")
         print()
-        print("=" * 70)
-        print("✅ Download Complete!")
-        print("=" * 70)
-        print()
-        
-        # Verify what was downloaded
-        verify_download(output_path)
-        
-    except Exception as e:
-        print()
-        print("=" * 70)
-        print("❌ Download Failed!")
-        print("=" * 70)
-        print(f"Error: {e}")
-        print()
-        print("Possible solutions:")
-        print("1. Check your internet connection")
-        print("2. Login to HuggingFace: huggingface-cli login")
-        print("3. Verify repo access: https://huggingface.co/datasets/marinero4972/Open-o3-Video")
-        print("4. Try again with --json-only first to test")
-        print()
-        raise
+        return
+
+    print(f"Found {len(archives)} archive file(s):")
+    for kind, p in archives:
+        size_mb = p.stat().st_size / (1024 * 1024)
+        print(f"  - {p.relative_to(data_root)} ({kind}, {size_mb:.1f} MB)")
+    print()
+
+    # Extract in-place next to each archive
+    for kind, p in archives:
+        print(f"Extracting {p.relative_to(data_root)} ...")
+        try:
+            target_dir = p.parent
+            if kind == "zip":
+                with zipfile.ZipFile(p, "r") as zf:
+                    zf.extractall(target_dir)
+            elif kind == "tar.gz":
+                with tarfile.open(p, "r:gz") as tf:
+                    tf.extractall(target_dir)
+            elif kind == "tar":
+                with tarfile.open(p, "r") as tf:
+                    tf.extractall(target_dir)
+            print("  ✅ Done")
+            # If you want to save space, uncomment the next two lines:
+            # p.unlink()
+            # print("  🗑️  Removed archive file")
+        except Exception as e:
+            print(f"  ❌ Failed to extract {p}: {e}")
+            print("  Continuing...")
+
+    print()
+    print("✅ Archive extraction pass finished.")
+    print()
 
 
 def verify_download(data_root: Path):

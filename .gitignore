@@ -49,3 +49,5 @@ temp/
 *.tmp
 logs/*
 Open-o3-Video
+*.err
+*.out
