@@ -264,7 +264,7 @@ def augment_sample(sample: Dict) -> Dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Augment STGR dataset with MCoT tags")
-    parser.add_argument('--input', type=str, default='/mnt/data/stgr/json_data/STGR-SFT.json')
+    parser.add_argument('--input', type=str, default='/scratch/bai.xiang/Open-o3-Video/json_data/STGR-SFT.json')
     parser.add_argument('--output', type=str, default=None)
     parser.add_argument('--samples', type=int, default=None)
     parser.add_argument('--output-suffix', type=str, default='-motion')
