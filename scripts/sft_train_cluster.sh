@@ -30,6 +30,9 @@ export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
 # Memory optimization
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
+# Video reader
+export VIDEO_READER_BACKEND=decord
+
 # Wandb
 export WANDB_MODE="online"
 
@@ -45,7 +48,7 @@ echo "Dataset: $DATASET_JSON"
 echo "Output: $OUT_DIR"
 echo ""
 
-# Single GPU - no torchrun/deepspeed needed
+# Single GPU - full fine-tuning (H200 has 141GB, no LoRA needed)
 python training/train_sft.py \
     --output_dir $OUT_DIR \
     --model_name_or_path $MODEL_PATH \
