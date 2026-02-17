@@ -18,6 +18,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # No complex motion metrics needed - using simple word matching!
 
 
+def normalize_obj_name(name: str) -> str:
+    """Normalize object names for identity matching."""
+    if not name:
+        return ""
+    name = name.lower().strip()
+    #keep alphanumerics and spaces only to reduce punctuation mismatch
+    name = re.sub(r"[^a-z0-9\s]", " ", name)
+    name = re.sub(r"\s+", " ", name).strip()
+    return name
+
+
 def parse_temporal_spatial_claims(think_content: str):
     """
     Parse think content to extract temporal-spatial claims.
@@ -247,12 +258,15 @@ def motion_trajectory_reward(completions, **kwargs):
                     gt_frame_times[frame_idx] = int(frame_idx) / 30.0
             
             # Match each prediction to closest GT frame (like thk_spatial_reward)
+            #enforce object identity consistency when calculating traj reward
             matched_predictions = []
             threshold = 2.0  # seconds - relaxed threshold
             
             for claim in parsed_claims:
                 pred_time = claim['timestamp']
                 pred_bbox = claim['bboxes'][0] if claim['bboxes'] else None
+                pred_obj_name = claim.get("object_name", "")
+                pred_obj_name_norm = normalize_obj_name(pred_obj_name)
                 
                 if pred_bbox is None:
                     continue
@@ -272,78 +286,88 @@ def motion_trajectory_reward(completions, **kwargs):
                         closest_frame_idx = frame_idx
                 
                 if closest_frame_idx and closest_frame_idx in gt_items:
-                    # Get GT bbox at this frame (any object)
-                    gt_obj_bboxes = list(gt_items[closest_frame_idx].values())
-                    if gt_obj_bboxes and gt_obj_bboxes[0]:
-                        gt_bbox = gt_obj_bboxes[0][0]
-                        gt_bbox = convert_coord_format(gt_bbox, image_size)
-                        
-                        matched_predictions.append({
-                            'pred_bbox': pred_bbox,
-                            'gt_bbox': gt_bbox,
-                            'pred_time': pred_time,
-                            'gt_time': gt_frame_times[closest_frame_idx],
-                            'frame_idx': closest_frame_idx
-                        })
+                    #this part should enforce same object matching 
+                    frame_objects = gt_items[closest_frame_idx]
+                    matched_gt_bbox = None
+                    for gt_obj_name, gt_obj_bboxes in frame_objects.items():
+                        if normalize_obj_name(gt_obj_name) == pred_obj_name_norm and gt_obj_bboxes:
+                            matched_gt_bbox = gt_obj_bboxes[0]
+                            break
+
+                    #if there is no same object GT found at this frame, skip 
+                    if matched_gt_bbox is None:
+                        continue
+
+                    gt_bbox = convert_coord_format(matched_gt_bbox, image_size)
+
+                    matched_predictions.append({
+                        'pred_bbox': pred_bbox,
+                        'gt_bbox': gt_bbox,
+                        'pred_time': pred_time,
+                        'gt_time': gt_frame_times[closest_frame_idx],
+                        'frame_idx': closest_frame_idx,
+                        'object_name': pred_obj_name,
+                        'object_name_norm': pred_obj_name_norm,
+                    })
             
             # Need at least 2 matched predictions spanning different frames
             if len(matched_predictions) < 2:
                 motion_rewards.append(0.0)
                 idx += 1
                 continue
-            
-            # Check if predictions span multiple GT frames
-            unique_frames = set(m['frame_idx'] for m in matched_predictions)
-            if len(unique_frames) < 2:
-                # All predictions matched to same frame - penalize (model should track across time)
-                motion_rewards.append(0.1)  # Small reward for trying
-                idx += 1
-                continue
-            
-            # Sort by time
-            matched_predictions = sorted(matched_predictions, key=lambda x: x['pred_time'])
-            
-            # 1. Parse direction from <motion> text (simple word matching!)
+
+            #group by object identity so trajectories are computed on the same object only
+            grouped = {}
+            for m in matched_predictions:
+                grouped.setdefault(m["object_name_norm"], []).append(m)
+
+            per_object_rewards = []
+
+            # Parse direction from <motion> text once; this code path currently uses
+            # the latest motion description in the completion.
             motion_tags = re.findall(r'<motion>([^<]+)</motion>', think_content)
-            pred_direction_text = None
-            if motion_tags:
-                pred_direction_text = parse_motion_direction(motion_tags[-1])  # Use last motion tag
-            
-            # 2. Compute GT direction from bboxes (simple classification)
-            if len(matched_predictions) >= 2:
-                bbox1 = matched_predictions[0]['gt_bbox']
-                bbox2 = matched_predictions[-1]['gt_bbox']
-                gt_direction_text = compute_direction_from_bboxes(bbox1, bbox2)
-            else:
-                gt_direction_text = None
-            
-            # 3. Simple direction match: pred text vs GT computed direction
-            if pred_direction_text and gt_direction_text:
-                direction_score = 1.0 if pred_direction_text == gt_direction_text else 0.0
-            else:
-                direction_score = 0.0
-            
-            # 4. Speed: simple magnitude comparison (no complex metrics)
-            if len(matched_predictions) >= 2:
-                # Compute displacement magnitude
-                bbox1 = matched_predictions[0]['pred_bbox']
-                bbox2 = matched_predictions[-1]['pred_bbox']
+            pred_direction_text = parse_motion_direction(motion_tags[-1]) if motion_tags else None
+
+            for _, obj_matches in grouped.items():
+                if len(obj_matches) < 2:
+                    continue
+
+                unique_frames = set(m['frame_idx'] for m in obj_matches)
+                if len(unique_frames) < 2:
+                    continue
+
+                obj_matches = sorted(obj_matches, key=lambda x: x['pred_time'])
+
+                # 1. GT direction for this same-object trajectory
+                gt_direction_text = compute_direction_from_bboxes(
+                    obj_matches[0]['gt_bbox'], obj_matches[-1]['gt_bbox']
+                )
+
+                # 2. Direction agreement
+                if pred_direction_text and gt_direction_text:
+                    direction_score = 1.0 if pred_direction_text == gt_direction_text else 0.0
+                else:
+                    direction_score = 0.0
+
+                # 3. Speed agreement
+                bbox1 = obj_matches[0]['pred_bbox']
+                bbox2 = obj_matches[-1]['pred_bbox']
                 pred_cx1 = (bbox1[0] + bbox1[2]) / 2
                 pred_cy1 = (bbox1[1] + bbox1[3]) / 2
                 pred_cx2 = (bbox2[0] + bbox2[2]) / 2
                 pred_cy2 = (bbox2[1] + bbox2[3]) / 2
-                pred_displacement = np.sqrt((pred_cx2 - pred_cx1)**2 + (pred_cy2 - pred_cy1)**2)
-                pred_time_diff = matched_predictions[-1]['pred_time'] - matched_predictions[0]['pred_time']
-                
-                gt_bbox1 = matched_predictions[0]['gt_bbox']
-                gt_bbox2 = matched_predictions[-1]['gt_bbox']
+                pred_displacement = np.sqrt((pred_cx2 - pred_cx1) ** 2 + (pred_cy2 - pred_cy1) ** 2)
+                pred_time_diff = obj_matches[-1]['pred_time'] - obj_matches[0]['pred_time']
+
+                gt_bbox1 = obj_matches[0]['gt_bbox']
+                gt_bbox2 = obj_matches[-1]['gt_bbox']
                 gt_cx1 = (gt_bbox1[0] + gt_bbox1[2]) / 2
                 gt_cy1 = (gt_bbox1[1] + gt_bbox1[3]) / 2
                 gt_cx2 = (gt_bbox2[0] + gt_bbox2[2]) / 2
                 gt_cy2 = (gt_bbox2[1] + gt_bbox2[3]) / 2
-                gt_displacement = np.sqrt((gt_cx2 - gt_cx1)**2 + (gt_cy2 - gt_cy1)**2)
-                gt_time_diff = matched_predictions[-1]['gt_time'] - matched_predictions[0]['gt_time']
-                
+                gt_displacement = np.sqrt((gt_cx2 - gt_cx1) ** 2 + (gt_cy2 - gt_cy1) ** 2)
+                gt_time_diff = obj_matches[-1]['gt_time'] - obj_matches[0]['gt_time']
+
                 if pred_time_diff > 0 and gt_time_diff > 0:
                     pred_speed = pred_displacement / pred_time_diff
                     gt_speed = gt_displacement / gt_time_diff
@@ -352,17 +376,18 @@ def motion_trajectory_reward(completions, **kwargs):
                         speed_ratio = min(pred_speed, gt_speed) / max(pred_speed, gt_speed)
                         speed_score = max(0.0, speed_ratio)  # [0, 1]
                     else:
-                        speed_score = 1.0 if pred_speed < 5.0 else 0.0  # Both stationary
+                        speed_score = 1.0 if pred_speed < 5.0 else 0.0
                 else:
                     speed_score = 0.0
+
+                object_reward = 0.5 * direction_score + 0.5 * speed_score
+                per_object_rewards.append(max(0.0, min(1.0, float(object_reward))))
+
+            if per_object_rewards:
+                #we can use mean reward over valid object trajectories? 
+                motion_rewards.append(float(np.mean(per_object_rewards)))
             else:
-                speed_score = 0.0
-            
-            # Combine: simple average (Open-o3-style, simple word matching!)
-            motion_reward = 0.5 * direction_score + 0.5 * speed_score
-            motion_reward = max(0.0, min(1.0, float(motion_reward)))
-            
-            motion_rewards.append(motion_reward)
+                motion_rewards.append(0.1 if len(matched_predictions) >= 2 else 0.0)
         
         except Exception as e:
             motion_rewards.append(0.0)
