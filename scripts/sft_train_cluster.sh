@@ -13,7 +13,7 @@
 set -euo pipefail
 
 echo "=========================================="
-echo "SFT Training - 1x H200"
+echo "SFT Training - 1x H200 (LoRA)"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
@@ -48,11 +48,15 @@ echo "Dataset: $DATASET_JSON"
 echo "Output: $OUT_DIR"
 echo ""
 
-# Single GPU - full fine-tuning (H200 has 141GB, no LoRA needed)
+# Single GPU with LoRA - full fine-tuning OOMs on 140GB with long sequences
 python training/train_sft.py \
     --output_dir $OUT_DIR \
     --model_name_or_path $MODEL_PATH \
     --dataset_name "$DATASET_JSON" \
+    --use_peft true \
+    --lora_r 64 \
+    --lora_alpha 128 \
+    --lora_target_modules q_proj k_proj v_proj o_proj \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 4 \
     --learning_rate 1e-6 \

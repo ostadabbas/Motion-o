@@ -26,7 +26,8 @@ GQA_ROOT = os.path.join(ROOT, "gqa")
 TIMERFT_ROOT = os.path.join(ROOT, "timerft")
 TVG_ROOT = os.path.join(ROOT, "tvg_r1")
 VIDEO_ESPRESSO_KF_ROOT = os.path.join(ROOT, "videoespresso/kfs")
-VIDEO_ESPRESSO_ROOT = os.path.join(ROOT, "videoespresso/videos")
+# VIDEO_ESPRESSO_ROOT = os.path.join(ROOT, "videoespresso/videos")
+VIDEO_ESPRESSO_ROOT = ROOT
 STR_KF_ROOT = os.path.join(ROOT, "stgr/temporal_grounding/kfs")
 STR_DATA = os.path.join(ROOT, "stgr/temporal_grounding/videos")
 STR_PLM_KF_ROOT = os.path.join(ROOT, "stgr/plm/kfs")
@@ -497,7 +498,9 @@ class Qwen2VLGRPOTrainer(Trainer):
                         del item[k]            
             for key in keys_to_remove:
                 del inputs[0]['key_items'][key]
-            
+        video_inputs = None
+        image_inputs = None
+        video_kwargs = {}
         try:
             image_inputs, video_inputs, video_kwargs = process_vision_info(input_copy, return_video_kwargs=True)
             if image_inputs is not None:
