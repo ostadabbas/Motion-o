@@ -8,6 +8,7 @@ motion evaluation (direction, speed, smoothness).
 import re
 import json
 import numpy as np
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,12 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # No complex motion metrics needed - using simple word matching!
+
+# Lightweight debug toggle for GRPO runs.
+# Set DEBUG_MOTION_REWARD=1 in the environment to enable.
+DEBUG_MOTION_REWARD = os.environ.get("DEBUG_MOTION_REWARD", "0") == "1"
+_DEBUG_MOTION_MAX_LOGS = int(os.environ.get("DEBUG_MOTION_REWARD_MAX", "10"))
+_debug_motion_logs = 0
 
 
 def normalize_obj_name(name: str) -> str:
@@ -384,10 +391,26 @@ def motion_trajectory_reward(completions, **kwargs):
                 per_object_rewards.append(max(0.0, min(1.0, float(object_reward))))
 
             if per_object_rewards:
-                #we can use mean reward over valid object trajectories? 
+                # we can use mean reward over valid object trajectories
                 motion_rewards.append(float(np.mean(per_object_rewards)))
             else:
                 motion_rewards.append(0.1 if len(matched_predictions) >= 2 else 0.0)
+
+            # Optional debug logging for GRPO sanity checks
+            global _debug_motion_logs
+            if DEBUG_MOTION_REWARD and _debug_motion_logs < _DEBUG_MOTION_MAX_LOGS:
+                _debug_motion_logs += 1
+                print(
+                    "[motion_reward] "
+                    f"task={task}, "
+                    f"claims={len(parsed_claims)}, "
+                    f"matched={len(matched_predictions)}, "
+                    f"objects={len(per_object_rewards)}, "
+                    f"has_motion_tag={bool(motion_tags)}, "
+                    f"pred_dir={pred_direction_text}, "
+                    f"reward={motion_rewards[-1]:.3f}",
+                    flush=True,
+                )
         
         except Exception as e:
             motion_rewards.append(0.0)

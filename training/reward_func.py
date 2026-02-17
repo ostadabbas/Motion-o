@@ -268,25 +268,28 @@ def format_reward(completions, **kwargs):
             continue
 
         think_content = think_match.group(1)
-
+        
         count_obj_start = think_content.count('<obj>')
         count_obj_end = think_content.count('</obj>')
         count_time_start = think_content.count('<t>')
         count_time_end = think_content.count('</t>')
         count_box_start = think_content.count('<box>')
         count_box_end = think_content.count('</box>')
-
+        count_motion_start = think_content.count('<motion>')
+        count_motion_end = think_content.count('</motion>')
+        
         is_obj_paired = (count_obj_start == count_obj_end)
         is_time_paired = (count_time_start == count_time_end)
         is_box_paired = (count_box_start == count_box_end)
-
+        is_motion_paired = (count_motion_start == count_motion_end)
+        
         # 如果数目不匹配，直接返回0
-        if not (is_obj_paired and is_time_paired and is_box_paired):
+        if not (is_obj_paired and is_time_paired and is_box_paired and is_motion_paired):
             rewards.append(0.0)
             continue
         
         has_st_reasoning = (count_obj_start > 0 and count_time_start > 0 and count_box_start > 0)
-
+        
         if kwargs['task'][0] == "temporal QA" or kwargs['task'][0] == "temporal QA (MCQ)":
             has_st_reasoning = count_time_start >= 2
         
@@ -296,8 +299,19 @@ def format_reward(completions, **kwargs):
             if match_pred:
                 has_st_reasoning = True
 
+        # Simple motion-tag enforcement for motion-relevant tasks:
+        # for temporal-spatial and general video QA tasks, require at least one <motion> tag
+        task_name = kwargs['task'][0]
+        requires_motion = task_name in [
+            "temporal-spatial free-form QA",
+            "General video QA Free-form",
+            "General video QA MCQ",
+        ]
+        if requires_motion and count_motion_start == 0:
+            has_st_reasoning = False
+        
         # 有完整的格式是1.0分，只满足think+answer是0.5分
-        if has_st_reasoning or "General video QA" in kwargs['task'][0]:
+        if has_st_reasoning or "General video QA" in task_name:
             rewards.append(1.0)
         else:
             rewards.append(0.5)
