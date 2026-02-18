@@ -498,9 +498,7 @@ class Qwen2VLGRPOTrainer(Trainer):
                         del item[k]            
             for key in keys_to_remove:
                 del inputs[0]['key_items'][key]
-        video_inputs = None
-        image_inputs = None
-        video_kwargs = {}
+            
         try:
             image_inputs, video_inputs, video_kwargs = process_vision_info(input_copy, return_video_kwargs=True)
             if image_inputs is not None:
@@ -604,6 +602,21 @@ class Qwen2VLGRPOTrainer(Trainer):
             # prompts_text[0] = prompts_text[0].replace("<|vision_start|><|video_pad|><|vision_end|>", "<|vision_start|><|video_pad|><|vision_end|>" + frame_prompt)
             # print(prompts_text[0])
             
+            # prompt_inputs = self.processing_class(
+            #     text=copy.deepcopy(prompts_text),
+            #     images=image_inputs,
+            #     videos=video_inputs,
+            #     return_tensors="pt",
+            #     padding=True,
+            #     padding_side="left",
+            #     add_special_tokens=False,
+            #     **video_kwargs,
+            # )
+            # Only pass video_kwargs if there are actual video fps values
+            extra_kwargs = {}
+            if video_kwargs and video_kwargs.get('fps'):
+                extra_kwargs = video_kwargs
+            
             prompt_inputs = self.processing_class(
                 text=copy.deepcopy(prompts_text),
                 images=image_inputs,
@@ -612,7 +625,7 @@ class Qwen2VLGRPOTrainer(Trainer):
                 padding=True,
                 padding_side="left",
                 add_special_tokens=False,
-                **video_kwargs,
+                **extra_kwargs,
             )
         
         prompt_inputs = super()._prepare_inputs(prompt_inputs)
@@ -628,7 +641,21 @@ class Qwen2VLGRPOTrainer(Trainer):
         if self.max_prompt_length is not None:
             prompt_ids = prompt_ids[:, -self.max_prompt_length :]
             prompt_mask = prompt_mask[:, -self.max_prompt_length :]     
-        
+        # Generation debugs
+        # print("=" * 60)
+        # print("DEBUG prompt_inputs keys:", sorted(prompt_inputs.keys()))
+        # print("DEBUG input_ids shape:", prompt_inputs["input_ids"].shape)
+        # print("DEBUG image_grid_thw:", prompt_inputs.get("image_grid_thw", "MISSING"), 
+        #     "shape:", prompt_inputs["image_grid_thw"].shape if "image_grid_thw" in prompt_inputs else "N/A")
+        # print("DEBUG video_grid_thw:", prompt_inputs.get("video_grid_thw", "MISSING"))
+        # print("DEBUG pixel_values shape:", prompt_inputs["pixel_values"].shape if "pixel_values" in prompt_inputs else "MISSING")
+        # print("DEBUG pixel_values_videos:", "pixel_values_videos" in prompt_inputs)
+        # vision_start_id = self.processing_class.tokenizer.convert_tokens_to_ids("<|vision_start|>")
+        # n_blocks = (prompt_inputs["input_ids"] == vision_start_id).sum().item()
+        # n_img_entries = prompt_inputs["image_grid_thw"].shape[0] if "image_grid_thw" in prompt_inputs else 0
+        # print(f"DEBUG vision blocks in tokens: {n_blocks}, image_grid_thw entries: {n_img_entries}")
+        # print(f"DEBUG source: {inputs[0]['source']}, task: {inputs[0]['task']}, multi_image: {multi_image}")
+        # print("=" * 60)
         # Generate completions
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
             prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config)
