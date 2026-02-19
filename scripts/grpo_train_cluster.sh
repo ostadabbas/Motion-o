@@ -86,9 +86,13 @@ python training/train_grpo.py \
     --attn_implementation flash_attention_2 \
     --num_train_epochs 1 \
     --beta 0.04 \
-    --logging_steps 10 \
+    --logging_steps 25 \
     --save_steps 500 \
     --report_to wandb \
+    --lr_scheduler_type cosine \
+    --weight_decay 0.01 \
+    --max_grad_norm 5 \
+    --save_only_model true \
     --run_name $EXP_NAME \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
