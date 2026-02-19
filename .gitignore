@@ -51,3 +51,5 @@ logs/*
 Open-o3-Video
 *.err
 *.out
+*.zip
+*.tar.gz

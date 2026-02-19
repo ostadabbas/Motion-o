@@ -13,7 +13,7 @@
 set -euo pipefail
 
 echo "=========================================="
-echo "GRPO Training - 1x H200 (LoRA on merged SFT)"
+echo "GRPO Training - 1x H200 141GB (LoRA on merged SFT)"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
@@ -29,10 +29,7 @@ export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
 
 # Memory optimization
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-
-# Video reader
 export DECORD_EOF_RETRY_MAX=20480
-export VIDEO_READER_BACKEND=decord
 
 # Wandb
 export WANDB_MODE="online"
@@ -47,23 +44,19 @@ DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-filtered.json"
 echo "Model: $MODEL_PATH"
 echo "Dataset: $DATASET_JSON"
 echo "Output: $OUT_DIR"
+echo "Effective batch size: 1 x 4 = 4"
 echo ""
 
-# H200 has ~141GB VRAM vs 46GB on RTX 8000
-# Budget breakdown (approximate for 7B bf16 model with LoRA):
-#   - Training model (bf16):     ~14GB
-#   - Reference model (bf16):    ~14GB
-#   - LoRA adapters + optimizer: ~4GB
-#   - KV cache for generation:   ~10-20GB (depends on seq length)
-#   - Activations (grad ckpt):   ~20-40GB (depends on num_generations)
-#   - Pixel values + frames:     ~5-10GB
-#   Total: ~70-100GB → fits H200 with room to spare
+# H200 141GB memory budget (with LoRA, no separate ref model):
+#   - Model (bf16):              ~14GB
+#   - LoRA + optimizer states:   ~4GB
+#   - Generation (8 completions): ~40GB
+#   - Activations (grad ckpt):   ~25GB
+#   - Pixel values + frames:     ~10GB
+#   Total: ~93GB / 141GB available
 #
-# Key scaling vs RTX 8000:
-#   - num_generations: 2 → 4 (better GRPO advantage estimation)
-#   - gradient_accumulation_steps: 4 (effective batch = 4)
-#   - max_pixels: 401408 → 802816 (higher resolution frames)
-#   - max_completion_length: 768 → 1024 (longer reasoning chains)
+# num_generations=8: much better advantage estimation
+# More generations = more signal per sample = faster convergence
 
 python training/train_grpo.py \
     --output_dir $OUT_DIR \
@@ -77,22 +70,23 @@ python training/train_grpo.py \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 4 \
     --num_generations 4 \
+    --generation_batch_size 4 \
     --max_prompt_length 16384 \
     --max_completion_length 1024 \
     --max_pixels 802816 \
     --learning_rate 5e-7 \
-    --bf16 true \
-    --gradient_checkpointing true \
-    --attn_implementation flash_attention_2 \
-    --num_train_epochs 1 \
-    --beta 0.04 \
-    --logging_steps 25 \
-    --save_steps 500 \
-    --report_to wandb \
     --lr_scheduler_type cosine \
     --weight_decay 0.01 \
+    --bf16 true \
+    --gradient_checkpointing true \
+    --attn_implementation eager \
+    --num_train_epochs 1 \
+    --beta 0.04 \
     --max_grad_norm 5 \
+    --logging_steps 25 \
+    --save_steps 500 \
     --save_only_model true \
+    --report_to wandb \
     --run_name $EXP_NAME \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
