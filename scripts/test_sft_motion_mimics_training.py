@@ -14,7 +14,7 @@ from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from datasets import Dataset, DatasetDict
 
 # Import training functions
-from training.train_sft import prepare_dataset
+from training.train_sft_v2 import prepare_dataset
 from training.vision_process import process_vision_info
 from configs.data_root import DATA_ROOT
 
@@ -121,12 +121,12 @@ def test_sft_motion_generation():
         torch.cuda.empty_cache()
     
     # Load model
-    model_path = "outputs/sft_h200_4403849/checkpoint-5000"  # ← UPDATED to latest model
+    model_path = "outputs/motiono_sft_v2_4456532/merged"  # ← UPDATED to latest model
     print(f"\n1. Loading SFT model: {model_path}")
     
     # GPU 0 = GTX 745 (4GB), GPUs 1-4 = V100 (32GB)
     # Force to use GPU 1 (V100)
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         model_path,
@@ -150,22 +150,9 @@ def test_sft_motion_generation():
     
     # Use sample #5283 - has STRONGEST motion (speed: 2.621 units/s)
     import re
-    sample_idx = 5283
+    sample_idx = 497
     sample = data[sample_idx]
-    
-    print(f"   Using sample #{sample_idx} (STRONGEST motion: speed 2.621 units/s)")
-    print(f"   Motion: up-left motion (speed: 2.621 units/s, smooth)")
-    print("✅ Found sample with motion tags")
-    print(f"   Task: {sample['task']}")
-    print(f"   Question: {sample['question'][:80]}...")
-    
-    # Extract expected motion tags
-    motion_tags = re.findall(r'<motion>([^<]+)</motion>', sample['reasoning_process'])
-    print(f"\n   Expected motion tags ({len(motion_tags)}):")
-    for i, tag in enumerate(motion_tags, 1):
-        is_stationary = 'stationary' in tag.lower()
-        marker = "⚠️ (stationary)" if is_stationary else "✅ (moving)"
-        print(f"     {i}. <motion>{tag}</motion> {marker}")
+
     
     # Prepare sample
     print("\n3. Preparing input (mimicking training collate_fn)...")
@@ -194,9 +181,9 @@ def test_sft_motion_generation():
             outputs = model.generate(
                 **inputs,
                 max_new_tokens=300,  # Reduced from 512 to save memory
-                do_sample=False,
-                temperature=None,
-                top_p=None,
+                do_sample=True,
+                temperature=1.0,
+                top_p=0.7,
             )
         
         # Decode
@@ -225,7 +212,7 @@ def test_sft_motion_generation():
     has_obj = '<obj>' in response
     has_box = '<box>' in response
     has_time = '<t>' in response and '</t>s' in response
-    has_motion = '<motion>' in response
+    has_motion = bool(re.search(r'<motion\s+[^/]*?/>', response))
     
     print(f"   <think> tag: {'✅' if has_think else '❌'}")
     print(f"   <answer> tag: {'✅' if has_answer else '❌'}")

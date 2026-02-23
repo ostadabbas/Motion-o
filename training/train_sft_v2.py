@@ -12,7 +12,7 @@ STR_DATA = os.path.join(ROOT, "stgr/temporal_grounding/videos")
 STR_PLM_KF_ROOT = os.path.join(ROOT, "stgr/plm/kfs")
 STR_PLM_DATA = os.path.join(ROOT, "stgr/plm/videos")
 GENERAL_VIDEO_ROOT = os.path.join(ROOT, "videor1")
-
+    
 ### for debug ###
 # os.environ["MASTER_PORT"] = "29501"
 # os.environ["RANK"] = "0"

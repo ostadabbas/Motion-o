@@ -59,13 +59,13 @@ python training/train_sft_v2.py \
     --lora_target_modules q_proj k_proj v_proj o_proj \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 4 \
-    --learning_rate 1e-6 \
+    --learning_rate 1e-5 \
     --logging_steps 10 \
     --bf16 true \
     --report_to wandb \
     --gradient_checkpointing true \
     --attn_implementation flash_attention_2 \
-    --num_train_epochs 1 \
+    --num_train_epochs 2 \
     --run_name $EXP_NAME \
     --save_steps 500 \
     --max_grad_norm 5 \

@@ -70,7 +70,7 @@ torchrun \
     --max_prompt_length 16384 \
     --max_completion_length 768 \
     --max_pixels 401408 \
-    --learning_rate 5e-7 \
+    --learning_rate 1e-6 \
     --lr_scheduler_type cosine \
     --weight_decay 0.01 \
     --bf16 true \
