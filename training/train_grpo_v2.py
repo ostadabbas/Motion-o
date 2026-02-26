@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 from grpo_trainer import Qwen2VLGRPOTrainer
 from trl import GRPOConfig, ModelConfig, ScriptArguments, TrlParser, get_peft_config
-from data_loader import get_data
+from data_loader_v2 import get_data
 from reward_func_v2 import (
     ans_acc_reward, 
     ans_tiou_reward, 

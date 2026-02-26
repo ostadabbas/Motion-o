@@ -3,12 +3,12 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h200:2
 #SBATCH --time=23:59:59
-#SBATCH --job-name=motiono_grpo_dense
+#SBATCH --job-name=motiono_grpo_densesft
 #SBATCH --mem=128GB
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --output=logs/motiono_grpo_dense_%j.out
-#SBATCH --error=logs/motiono_grpo_dense_%j.err
+#SBATCH --output=logs/motiono_grpo_densesft_%j.out
+#SBATCH --error=logs/motiono_grpo_densesft_%j.err
 
 set -euo pipefail
 
@@ -24,15 +24,15 @@ export WANDB_MODE="online"
 # Enable motion reward debug logging (first 10 samples)
 export DEBUG_MOTION_REWARD=1
 
-# SFT checkpoint that already produces <motion .../> tags
-MODEL_PATH="outputs/motiono_sft_v2_4482512/merged"
-EXP_NAME="motiono_grpo_dense_${SLURM_JOB_ID}"
+# Dense SFT checkpoint that produces <motion .../> tags
+MODEL_PATH="outputs/motiono_sft_dense_4553555/merged"
+EXP_NAME="motiono_grpo_densesft_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/scratch/bai.xiang/Open-o3-Video"
-# DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-filtered-motion-densebbox-gt.json"
 # DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-dense-5k.json"
-# added data mix. 
+# added mixed dataset samples.
 DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-dense-5k-mixed.json"
+
 # Auto-resume from latest checkpoint
 RESUME_ARG=""
 if [ -d "$OUT_DIR" ]; then
@@ -44,7 +44,7 @@ if [ -d "$OUT_DIR" ]; then
 fi
 
 echo "=========================================="
-echo "Motion-o GRPO — Dense PLM GT + Motion Reward"
+echo "Motion-o GRPO — Dense SFT + Dense RL GT"
 echo "2x H200 141GB"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
@@ -95,5 +95,5 @@ torchrun \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
 echo ""
-echo "Motion-o GRPO Dense Complete! Model at: $OUT_DIR"
+echo "Motion-o GRPO Dense SFT Complete! Model at: $OUT_DIR"
 echo "End: $(date)"

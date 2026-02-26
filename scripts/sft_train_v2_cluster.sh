@@ -25,7 +25,7 @@ cd /projects/zura-storage/Workspace/vlmm-mcot
 mkdir -p logs
 
 # Activate environment
-source /projects/zura-storage/Workspace/dora/env_dora/bin/activate
+source /projects/zura-storage/Workspace/docra/env_dora/bin/activate
 export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
 
 # Memory optimization

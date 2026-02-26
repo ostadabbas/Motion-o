@@ -109,8 +109,9 @@ def main():
 
     # --- Config ---
     # model_path = "outputs/motiono_sft_v2_4456532/merged"
-    model_path = "outputs/motiono_sft_v2_4482512/merged"
-    dataset_path = os.path.join(DATA_ROOT, "json_data/STGR-SFT-filtered-motion.json")
+    # model_path = "outputs/motiono_sft_v2_4482512/merged"
+    model_path = "outputs/motiono_sft_dense_4553555/merged"
+    dataset_path = os.path.join(DATA_ROOT, "json_data/STGR-SFT-filtered-motion-densebbox.json")
 
     # GPU setup
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
