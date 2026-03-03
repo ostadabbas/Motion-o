@@ -510,6 +510,7 @@ class Qwen2VLGRPOTrainer(Trainer):
             for key in keys_to_remove:
                 del inputs[0]['key_items'][key]
             
+        image_inputs, video_inputs, video_kwargs = None, None, {}
         try:
             image_inputs, video_inputs, video_kwargs = process_vision_info(input_copy, return_video_kwargs=True)
             if image_inputs is not None:
@@ -523,7 +524,8 @@ class Qwen2VLGRPOTrainer(Trainer):
                 inputs[0]['prompt_text_final'] = prompts_text[0]
 
         except Exception as e:
-            print(f"process_vision_info error, using fixed data, {e}")
+            print(f"process_vision_info error, skipping sample: {e}")
+            return torch.tensor(0.0, device=self.accelerator.device, requires_grad=True)
             
         current_step = self.state.global_step + 1
         total_steps = self.state.max_steps
