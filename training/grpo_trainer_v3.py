@@ -351,13 +351,24 @@ class Qwen2VLGRPOTrainer(Trainer):
         self.max_completion_length = args.max_completion_length  # = |o_i| in the GRPO paper
         self.num_generations = args.num_generations  # = G in the GRPO paper
         # self.temporal = script_args.temporal
+        # Vision-special tokens that must never appear in generated text.
+        # If sampled, they corrupt get_rope_index which assumes every
+        # <|vision_start|><|image_pad|> block has a matching image_grid_thw entry.
+        vision_special_ids = [
+            151652,  # <|vision_start|>
+            151653,  # <|vision_end|>
+            151654,  # <|vision_pad|>
+            151655,  # <|image_pad|>
+            151656,  # <|video_pad|>
+        ]
         self.generation_config = GenerationConfig(
             max_new_tokens=self.max_completion_length,
             do_sample=True,
-            top_p=0.95,  
-            temperature=1, # HACK
+            top_p=0.95,
+            temperature=1,
             num_return_sequences=self.num_generations,
             pad_token_id=pad_token_id,
+            suppress_tokens=vision_special_ids,
         )
 
         # self.len_control = script_args.len_control
@@ -663,8 +674,20 @@ class Qwen2VLGRPOTrainer(Trainer):
             prompt_ids = prompt_completion_ids[:, :prompt_length]
             completion_ids = prompt_completion_ids[:, prompt_length:]
             prompt_mask = prompt_mask.repeat_interleave(self.num_generations, dim=0)
-            
-        # print('prompt_length:', prompt_length)    
+
+        # Safety net: replace any vision-special tokens that leaked into the
+        # *completion* portion.  These would cause get_rope_index to find more
+        # vision blocks than image_grid_thw entries, crashing with CUDA
+        # "index out of bounds".  Only touch the completion; the prompt is fine.
+        _pad = self.processing_class.pad_token_id
+        _vision_ids = {151652, 151653, 151654, 151655, 151656}
+        completion_part = prompt_completion_ids[:, prompt_length:]
+        for vid in _vision_ids:
+            completion_part = completion_part.masked_fill(completion_part == vid, _pad)
+        prompt_completion_ids = torch.cat(
+            [prompt_completion_ids[:, :prompt_length], completion_part], dim=1
+        )
+        completion_ids = prompt_completion_ids[:, prompt_length:]
 
         # Mask everything after the first EOS token
         is_eos = completion_ids == self.processing_class.eos_token_id
@@ -775,6 +798,7 @@ class Qwen2VLGRPOTrainer(Trainer):
                     do_sample=False,
                     num_return_sequences=1,
                     pad_token_id=self.processing_class.pad_token_id,
+                    suppress_tokens=[151652, 151653, 151654, 151655, 151656],
                 )
                 
                 with torch.no_grad():
