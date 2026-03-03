@@ -73,17 +73,6 @@ class GRPOScriptArguments(ScriptArguments):
 #     "spatial": spatial_reward,
 # }
 
-reward_funcs_registry = {
-    "ans_acc": ans_acc_reward,
-    "ans_tiou": ans_tiou_reward,
-    "ans_viou": ans_viou_reward,
-    "thk_temporal_point": thk_temporal_point_reward,
-    "thk_temporal_segment": thk_temporal_segment_reward,
-    "thk_spatial": thk_spatial_reward,
-    "motion_trajectory": motion_trajectory_reward,  # ⭐ Motion-aware trajectory reward
-    "format": format_reward
-}
-
 
 # ans_acc_reward
 # ans_tiou_reward

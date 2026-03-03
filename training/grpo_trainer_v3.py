@@ -656,6 +656,30 @@ class Qwen2VLGRPOTrainer(Trainer):
         # print(f"DEBUG vision blocks in tokens: {n_blocks}, image_grid_thw entries: {n_img_entries}")
         # print(f"DEBUG source: {inputs[0]['source']}, task: {inputs[0]['task']}, multi_image: {multi_image}")
         # print("=" * 60)
+        # DEBUG: right before generate (line ~661)
+        # print(f"DEBUG pre-generate:")
+        # print(f"  sample source: {inputs[0].get('source', '?')}")
+        # print(f"  task: {inputs[0].get('task', '?')}")
+        # print(f"  input_ids shape: {prompt_inputs['input_ids'].shape}")
+        # print(f"  multi_image: {multi_image}")
+        # if 'pixel_values' in prompt_inputs:
+        #     print(f"  pixel_values shape: {prompt_inputs['pixel_values'].shape}")
+        #     print(f"  image_grid_thw shape: {prompt_inputs['image_grid_thw'].shape}")
+        # if 'pixel_values_videos' in prompt_inputs:
+        #     print(f"  pixel_values_videos shape: {prompt_inputs['pixel_values_videos'].shape}")
+        #     print(f"  video_grid_thw shape: {prompt_inputs['video_grid_thw'].shape}")
+        # vs_id = self.processing_class.tokenizer.convert_tokens_to_ids('<|vision_start|>')
+        # vs_count = (prompt_inputs['input_ids'] == vs_id).sum().item()
+        # if 'image_grid_thw' in prompt_inputs:
+        #     grid_count = prompt_inputs['image_grid_thw'].shape[0]
+        # elif 'video_grid_thw' in prompt_inputs:
+        #     grid_count = prompt_inputs['video_grid_thw'].shape[0]
+        # else:
+        #     grid_count = 0
+        # print(f"  vision_start: {vs_count}, grid: {grid_count}, match: {vs_count == grid_count}")
+        # print(f"  last 5 token ids: {prompt_inputs['input_ids'][0, -5:].tolist()}")
+        # sys.stdout.flush()
+        # END DEBUG
         # Generate completions
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
             prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config)

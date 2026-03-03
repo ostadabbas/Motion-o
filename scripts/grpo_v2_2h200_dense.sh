@@ -3,12 +3,12 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h200:2
 #SBATCH --time=23:59:59
-#SBATCH --job-name=motiono_grpo_dense
+#SBATCH --job-name=grpo_sparse_t07
 #SBATCH --mem=128GB
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --output=logs/motiono_grpo_dense_%j.out
-#SBATCH --error=logs/motiono_grpo_dense_%j.err
+#SBATCH --output=logs/grpo_sparse_t07_%j.out
+#SBATCH --error=logs/grpo_sparse_t07_%j.err
 
 set -euo pipefail
 
@@ -20,20 +20,14 @@ export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export DECORD_EOF_RETRY_MAX=20480
 export WANDB_MODE="online"
-
-# Enable motion reward debug logging (first 10 samples)
 export DEBUG_MOTION_REWARD=1
 
-# SFT checkpoint that already produces <motion .../> tags
 MODEL_PATH="outputs/motiono_sft_v2_4482512/merged"
-EXP_NAME="motiono_grpo_dense_${SLURM_JOB_ID}"
+EXP_NAME="grpo_sparse_t07_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/scratch/bai.xiang/Open-o3-Video"
-# DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-filtered-motion-densebbox-gt.json"
-# DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-dense-5k.json"
-# added data mix. 
 DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-dense-5k-mixed.json"
-# Auto-resume from latest checkpoint
+
 RESUME_ARG=""
 if [ -d "$OUT_DIR" ]; then
     LATEST_CKPT=$(ls -d ${OUT_DIR}/checkpoint-* 2>/dev/null | sort -t- -k2 -n | tail -1)
@@ -44,7 +38,7 @@ if [ -d "$OUT_DIR" ]; then
 fi
 
 echo "=========================================="
-echo "Motion-o GRPO — Dense PLM GT + Motion Reward"
+echo "GRPO — Sparse SFT + temp=0.7"
 echo "2x H200 141GB"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
@@ -95,5 +89,5 @@ torchrun \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
 echo ""
-echo "Motion-o GRPO Dense Complete! Model at: $OUT_DIR"
+echo "Done! Model at: $OUT_DIR"
 echo "End: $(date)"
