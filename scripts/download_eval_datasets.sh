@@ -11,7 +11,7 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=$USER@northeastern.edu
 
-set -euo pipefail
+set -uo pipefail
 
 cd /projects/zura-storage/Workspace/vlmm-mcot
 mkdir -p logs
@@ -38,6 +38,12 @@ else
     huggingface-cli download V-STaR-Bench/V-STaR \
         --repo-type dataset \
         --local-dir "$VSTAR_DIR"
+    # Unzip videos if they came as a zip
+    if [ -f "$VSTAR_DIR/vstar_videos.zip" ] && [ ! -d "$VSTAR_DIR/videos" ]; then
+        echo "  Unzipping videos..."
+        cd "$VSTAR_DIR"
+        unzip -q vstar_videos.zip
+    fi
     echo "  Done: $VSTAR_DIR"
 fi
 
@@ -63,7 +69,7 @@ if [ -d "$VMMMU_DIR" ]; then
 else
     huggingface-cli download lmms-lab/VideoMMMU \
         --repo-type dataset \
-        --local-dir "$VMMMU_DIR"
+        --local-dir "$VMMMU_DIR" || echo "  FAILED: VideoMMMU is gated — accept terms at https://huggingface.co/datasets/lmms-lab/VideoMMMU and run huggingface-cli login"
     echo "  Done: $VMMMU_DIR"
 fi
 
