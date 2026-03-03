@@ -17,6 +17,7 @@ cd /projects/zura-storage/Workspace/vlmm-mcot
 mkdir -p logs
 
 source /projects/zura-storage/Workspace/dora/env_grpo/bin/activate
+pip install -q huggingface_hub[cli]
 
 DOWNLOAD_DIR="${1:-/scratch/bai.xiang/eval_benchmarks}"
 
@@ -30,52 +31,52 @@ mkdir -p "$DOWNLOAD_DIR"
 # ---------- 1. V-STaR ----------
 echo ""
 echo "[1/4] V-STaR (V-STaR-Bench/V-STaR)"
-echo "  Videos + annotations for spatio-temporal reasoning"
 VSTAR_DIR="$DOWNLOAD_DIR/V-STaR"
 if [ -d "$VSTAR_DIR" ] && [ -f "$VSTAR_DIR/V_STaR_test.json" ]; then
-    echo "  Already exists at $VSTAR_DIR — skipping (delete to re-download)"
+    echo "  Already exists — skipping"
 else
-    cd "$DOWNLOAD_DIR"
-    GIT_LFS_SKIP_SMUDGE=0 git clone https://huggingface.co/datasets/V-STaR-Bench/V-STaR
+    huggingface-cli download V-STaR-Bench/V-STaR \
+        --repo-type dataset \
+        --local-dir "$VSTAR_DIR"
     echo "  Done: $VSTAR_DIR"
 fi
 
 # ---------- 2. Video-MME ----------
 echo ""
 echo "[2/4] Video-MME (lmms-lab/Video-MME)"
-echo "  900 videos for multi-modal evaluation"
 VMME_DIR="$DOWNLOAD_DIR/Video-MME"
 if [ -d "$VMME_DIR" ]; then
-    echo "  Already exists at $VMME_DIR — skipping"
+    echo "  Already exists — skipping"
 else
-    cd "$DOWNLOAD_DIR"
-    GIT_LFS_SKIP_SMUDGE=0 git clone https://huggingface.co/datasets/lmms-lab/Video-MME
+    huggingface-cli download lmms-lab/Video-MME \
+        --repo-type dataset \
+        --local-dir "$VMME_DIR"
     echo "  Done: $VMME_DIR"
 fi
 
 # ---------- 3. VideoMMMU ----------
 echo ""
 echo "[3/4] VideoMMMU (lmms-lab/VideoMMMU)"
-echo "  Multi-discipline professional video QA"
 VMMMU_DIR="$DOWNLOAD_DIR/VideoMMMU"
 if [ -d "$VMMMU_DIR" ]; then
-    echo "  Already exists at $VMMMU_DIR — skipping"
+    echo "  Already exists — skipping"
 else
-    cd "$DOWNLOAD_DIR"
-    GIT_LFS_SKIP_SMUDGE=0 git clone https://huggingface.co/datasets/lmms-lab/VideoMMMU
+    huggingface-cli download lmms-lab/VideoMMMU \
+        --repo-type dataset \
+        --local-dir "$VMMMU_DIR"
     echo "  Done: $VMMMU_DIR"
 fi
 
 # ---------- 4. WorldSense ----------
 echo ""
 echo "[4/4] WorldSense (honglyhly/WorldSense)"
-echo "  Omnimodal video understanding benchmark"
 WS_DIR="$DOWNLOAD_DIR/WorldSense"
 if [ -d "$WS_DIR" ]; then
-    echo "  Already exists at $WS_DIR — skipping"
+    echo "  Already exists — skipping"
 else
-    cd "$DOWNLOAD_DIR"
-    GIT_LFS_SKIP_SMUDGE=0 git clone https://huggingface.co/datasets/honglyhly/WorldSense
+    huggingface-cli download honglyhly/WorldSense \
+        --repo-type dataset \
+        --local-dir "$WS_DIR"
     echo "  Done: $WS_DIR"
 fi
 
