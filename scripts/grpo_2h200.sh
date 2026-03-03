@@ -84,6 +84,7 @@ torchrun \
     --save_only_model true \
     --report_to wandb \
     --run_name grpo_h200_chain \
+    --temperature 0.7 \
     $RESUME_ARG \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 

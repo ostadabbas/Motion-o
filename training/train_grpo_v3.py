@@ -64,6 +64,10 @@ class GRPOScriptArguments(ScriptArguments):
         default=True,
         metadata={"help": "whether using length reward"},
     )
+    temperature: Optional[float] = field(
+        default=0.7,
+        metadata={"help": "Sampling temperature for generation (1.0 for more exploration, 0.7 for safer)"},
+    )
 
 
 # reward_funcs_registry = {
@@ -72,17 +76,6 @@ class GRPOScriptArguments(ScriptArguments):
 #     "temporal": temporal_reward,
 #     "spatial": spatial_reward,
 # }
-
-reward_funcs_registry = {
-    "ans_acc": ans_acc_reward,
-    "ans_tiou": ans_tiou_reward,
-    "ans_viou": ans_viou_reward,
-    "thk_temporal_point": thk_temporal_point_reward,
-    "thk_temporal_segment": thk_temporal_segment_reward,
-    "thk_spatial": thk_spatial_reward,
-    "motion_trajectory": motion_trajectory_reward,  # ⭐ Motion-aware trajectory reward
-    "format": format_reward
-}
 
 
 # ans_acc_reward
@@ -131,6 +124,7 @@ def main(script_args, training_args, model_args):
         attn_implementation=model_args.attn_implementation,
         max_pixels=script_args.max_pixels,
         min_pixels=script_args.min_pixels,
+        temperature=script_args.temperature,
     )
     
     if training_args.resume_from_checkpoint is not None:

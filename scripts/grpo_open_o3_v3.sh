@@ -91,6 +91,7 @@ torchrun \
     --report_to wandb \
     --run_name $EXP_NAME \
     --seed 42 \
+    --temperature 1.0 \
     $RESUME_ARG \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory motion_grounding format
 

@@ -186,6 +186,7 @@ class Qwen2VLGRPOTrainer(Trainer):
         min_pixels: Optional[int] = 3136,
         attn_implementation: str = "flash_attention_2",
         gspo = True,
+        temperature: float = 0.7,
     ):
         # Args
         if args is None:
@@ -365,7 +366,7 @@ class Qwen2VLGRPOTrainer(Trainer):
             max_new_tokens=self.max_completion_length,
             do_sample=True,
             top_p=0.95,
-            temperature=0.7,
+            temperature=temperature,
             num_return_sequences=self.num_generations,
             pad_token_id=pad_token_id,
             suppress_tokens=vision_special_ids,
