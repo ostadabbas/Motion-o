@@ -31,7 +31,8 @@ set -euo pipefail
 cd /projects/zura-storage/Workspace/vlmm-mcot
 mkdir -p logs
 
-source /projects/zura-storage/Workspace/dora/env_grpo/bin/activate
+# Use env_eval for vLLM-based evaluation (separate from env_grpo training env)
+source /projects/zura-storage/Workspace/dora/env_eval/bin/activate
 export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd):$(pwd)/evaluation"
 
 # ---- Configuration (update these paths for your cluster) ----
@@ -71,7 +72,7 @@ echo "Eval GPUs:   $NUM_EVAL_GPUS"
 echo "Start:       $(date)"
 echo "=========================================="
 
-# ---------- Step 1: Merge LoRA adapter ----------
+# ---------- Step 1: Merge LoRA adapter (uses env_grpo for PEFT) ----------
 if [ -f "${MERGED_DIR}/config.json" ]; then
     echo ""
     echo "[Step 1/3] Merged model already exists at $MERGED_DIR — skipping merge."
@@ -79,7 +80,8 @@ else
     echo ""
     echo "[Step 1/3] Merging LoRA adapter into base model..."
 
-    # Read base model path from adapter_config.json
+    source /projects/zura-storage/Workspace/dora/env_grpo/bin/activate
+
     BASE_MODEL=$(python -c "
 import json, os
 ac = json.load(open('${CHECKPOINT_PATH}/adapter_config.json'))
@@ -99,6 +101,9 @@ print(ac['base_model_name_or_path'])
         --output "$MERGED_DIR"
 
     echo "  Merge complete!"
+
+    # Switch back to eval env for inference
+    source /projects/zura-storage/Workspace/dora/env_eval/bin/activate
 fi
 
 # ---------- Step 2: V-STaR inference ----------
