@@ -22,7 +22,6 @@ model = QwenVL_VLLM(
     video_max_pixels=2097152,
     video_max_frames=16,
     max_model_len=8192,
-    gpu_memory_utilization=0.9,
 )
 
 print("Model loaded! Running 2-sample test...\n")
