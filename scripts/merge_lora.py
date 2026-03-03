@@ -65,7 +65,8 @@ def main():
     )
 
     base_vocab = base_model.config.vocab_size
-    base_embed_shape = base_model.model.embed_tokens.weight.shape
+    embed_layer = getattr(base_model.model, 'embed_tokens', None) or getattr(base_model.model.language_model, 'embed_tokens', None)
+    base_embed_shape = embed_layer.weight.shape if embed_layer else (base_vocab, "unknown")
     print(f"  Base vocab_size:    {base_vocab}")
     print(f"  Base embed shape:   {list(base_embed_shape)}")
 
@@ -91,13 +92,16 @@ def main():
     print("\n[3/5] Merging adapter into base weights...")
     merged_model = model.merge_and_unload()
 
-    merged_embed_shape = merged_model.model.embed_tokens.weight.shape
-    merged_lm_head_shape = merged_model.lm_head.weight.shape
-    print(f"  Merged embed shape:   {list(merged_embed_shape)}")
-    print(f"  Merged lm_head shape: {list(merged_lm_head_shape)}")
+    embed_layer = getattr(merged_model.model, 'embed_tokens', None) or getattr(merged_model.model.language_model, 'embed_tokens', None)
+    lm_head = getattr(merged_model, 'lm_head', None) or getattr(merged_model.model.language_model, 'lm_head', None)
+    merged_embed_shape = embed_layer.weight.shape if embed_layer else "unknown"
+    merged_lm_head_shape = lm_head.weight.shape if lm_head else "unknown"
+    print(f"  Merged embed shape:   {list(merged_embed_shape) if isinstance(merged_embed_shape, torch.Size) else merged_embed_shape}")
+    print(f"  Merged lm_head shape: {list(merged_lm_head_shape) if isinstance(merged_lm_head_shape, torch.Size) else merged_lm_head_shape}")
 
-    if merged_embed_shape[0] != base_embed_shape[0]:
-        print(f"  WARNING: Embedding size changed from {base_embed_shape[0]} to {merged_embed_shape[0]}!")
+    if isinstance(merged_embed_shape, torch.Size) and isinstance(base_embed_shape, torch.Size):
+        if merged_embed_shape[0] != base_embed_shape[0]:
+            print(f"  WARNING: Embedding size changed from {base_embed_shape[0]} to {merged_embed_shape[0]}!")
 
     # --- Fix config ---
     print("\n[4/5] Fixing config and saving...")

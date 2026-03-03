@@ -32,7 +32,7 @@ cd /projects/zura-storage/Workspace/vlmm-mcot
 mkdir -p logs
 
 source /projects/zura-storage/Workspace/dora/env_grpo/bin/activate
-export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd)"
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$(pwd):$(pwd)/evaluation"
 
 # ---- Configuration (update these paths for your cluster) ----
 VSTAR_VIDEO_FOLDER="/scratch/bai.xiang/eval_benchmarks/V-STaR/videos"
