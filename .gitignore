@@ -53,3 +53,4 @@ Open-o3-Video
 *.out
 *.zip
 *.tar.gz
+evaluation/logs/
