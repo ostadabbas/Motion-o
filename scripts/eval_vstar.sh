@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=multigpu
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:h200:1
+#SBATCH --gres=gpu:a100:1
 #SBATCH --time=23:59:59
 #SBATCH --job-name=eval_vstar
 #SBATCH --mem=64GB
@@ -42,7 +42,8 @@ LLM_PATH="Qwen/Qwen2.5-72B-Instruct"
 NUM_EVAL_GPUS=1
 # ---------------------------------------------------------------
 
-CHECKPOINT_PATH="${1:?Usage: sbatch scripts/eval_vstar.sh <checkpoint_path>}"
+CHECKPOINT_PATH="${1:?Usage: sbatch scripts/eval_vstar.sh <checkpoint_path> [max_samples]}"
+MAX_SAMPLES="${2:-}"
 
 if [ ! -d "$CHECKPOINT_PATH" ]; then
     echo "ERROR: Checkpoint not found: $CHECKPOINT_PATH"
@@ -115,13 +116,19 @@ mkdir -p ./evaluation/logs/vstar_logs
 GPU_IDS=$(seq -s, 0 $((NUM_EVAL_GPUS - 1)))
 
 MODEL_KWARGS="./evaluation/config/vstar.yaml"
+SAMPLES_ARG=""
+if [ -n "$MAX_SAMPLES" ]; then
+    SAMPLES_ARG="--max_samples $MAX_SAMPLES"
+    echo "  Running on subset: $MAX_SAMPLES samples"
+fi
+
 NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_vstar_multi_images.py \
     --video_folder "$VSTAR_VIDEO_FOLDER" \
     --anno_file "$VSTAR_ANNO_FILE" \
     --result_file "./evaluation/logs/vstar_logs/${EXP_NAME}_vstar.json" \
     --model_path "$MERGED_DIR" \
     --model_kwargs $MODEL_KWARGS \
-    --think_mode 2>&1 | tee "./evaluation/logs/vstar_logs/test_${EXP_NAME}_vstar.log"
+    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/vstar_logs/test_${EXP_NAME}_vstar.log"
 
 echo "  V-STaR inference complete!"
 
