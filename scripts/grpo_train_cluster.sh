@@ -88,7 +88,7 @@ python training/train_grpo.py \
     --save_only_model true \
     --report_to wandb \
     --run_name $EXP_NAME \
-    --temperature 0.7 \
+    --gen_temperature 0.7 \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
 echo ""

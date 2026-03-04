@@ -64,7 +64,7 @@ class GRPOScriptArguments(ScriptArguments):
         default=True,
         metadata={"help": "whether using length reward"},
     )
-    temperature: Optional[float] = field(
+    gen_temperature: Optional[float] = field(
         default=0.7,
         metadata={"help": "Sampling temperature for generation (1.0 for more exploration, 0.7 for safer)"},
     )
@@ -124,7 +124,7 @@ def main(script_args, training_args, model_args):
         attn_implementation=model_args.attn_implementation,
         max_pixels=script_args.max_pixels,
         min_pixels=script_args.min_pixels,
-        temperature=script_args.temperature,
+        temperature=script_args.gen_temperature,
     )
     
     if training_args.resume_from_checkpoint is not None:

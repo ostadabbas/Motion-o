@@ -84,7 +84,7 @@ python training/train_grpo.py \
     --max_grad_norm 5 \
     --save_only_model true \
     --num_generations 2 \
-    --temperature 0.7 \
+    --gen_temperature 0.7 \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory format
 
 EXIT_CODE=$?
