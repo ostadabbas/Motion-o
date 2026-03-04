@@ -39,8 +39,8 @@ MODEL_PATH="outputs/motiono_sft_dense_4553555/merged" # ← replace with actual 
 EXP_NAME="motion-o_grpo_v3_${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/scratch/bai.xiang/Open-o3-Video"
-DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-filtered-motion-densebbox.json"
-
+# DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-filtered-motion-densebbox.json"
+DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-dense-mixed-clean.json"
 echo "Model:   $MODEL_PATH"
 echo "Dataset: $DATASET_JSON"
 echo "Output:  $OUT_DIR"
