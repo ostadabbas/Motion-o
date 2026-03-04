@@ -136,7 +136,7 @@ NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/t
     --model_kwargs ./evaluation/config/video_mme.yaml \
     --N 1 \
     --vote 'majority_voting' \
-    --think_mode 2>&1 | tee "./evaluation/logs/videomme_logs/${EXP_NAME}_mme.log" || echo "  Video-MME FAILED — continuing"
+    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videomme_logs/${EXP_NAME}_mme.log" || echo "  Video-MME FAILED — continuing"
 
 echo "  Video-MME done!"
 
@@ -154,7 +154,7 @@ NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/t
     --model_kwargs ./evaluation/config/video_mmmu.yaml \
     --N 1 \
     --vote 'majority_voting' \
-    --think_mode 2>&1 | tee "./evaluation/logs/videommmu_logs/${EXP_NAME}_videommmu.log" || echo "  VideoMMMU FAILED — continuing"
+    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videommmu_logs/${EXP_NAME}_videommmu.log" || echo "  VideoMMMU FAILED — continuing"
 
 echo "  VideoMMMU done!"
 
@@ -172,7 +172,7 @@ NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/t
     --model_kwargs ./evaluation/config/world_sense.yaml \
     --N 1 \
     --vote 'majority_voting' \
-    --think_mode 2>&1 | tee "./evaluation/logs/world_logs/${EXP_NAME}_wds.log" || echo "  WorldSense FAILED — continuing"
+    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/world_logs/${EXP_NAME}_wds.log" || echo "  WorldSense FAILED — continuing"
 
 echo "  WorldSense done!"
 

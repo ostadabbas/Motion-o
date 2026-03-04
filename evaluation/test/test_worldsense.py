@@ -61,7 +61,7 @@ def parse_args():
         "--vote", type=str, default="confidence_voting", help="Experiment name."
     )
     parser.add_argument("--N", type=int, default=8, help="number of paths")
-
+    parser.add_argument("--max_samples", type=int, default=None, help="Limit evaluation to N samples")
 
     args = parser.parse_args()
 
@@ -261,6 +261,14 @@ def evaluate(args, num_gpus, gpu_list):
         gpu_list = list(range(num_gpus))
 
     video_paths, image, text_input, docs = worldsense.get_data()
+
+    if args.max_samples and args.max_samples < len(video_paths):
+        print(f"Using subset of {args.max_samples} samples (out of {len(video_paths)})")
+        video_paths = video_paths[:args.max_samples]
+        image = image[:args.max_samples]
+        text_input = text_input[:args.max_samples]
+        docs = docs[:args.max_samples]
+
     total = len(video_paths)
 
     models_per_gpu = args.models_per_gpu
