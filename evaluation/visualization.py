@@ -134,6 +134,15 @@ class VideoQAGIFGenerator:
                 name, box_str, time_str = obj_pattern.groups()
                 return {'time': float(time_str), 'objects': [{'name': name, 'box': ast.literal_eval(box_str)}]}
             except (ValueError, SyntaxError): return None
+        motion_pattern = re.search(
+            r'<motion\s+obj="([^"]*?)"\s+dir="([^"]*?)"\s+speed="([^"]*?)"\s+scale="([^"]*?)"\s*/>', tag_string
+        )
+        if motion_pattern:
+            obj_name, direction, speed, scale = motion_pattern.groups()
+            label = f"{obj_name} [{direction} {speed} {scale}]"
+            return {'time': None, 'objects': [], 'motion': {
+                'obj': obj_name, 'dir': direction, 'speed': speed, 'scale': scale, 'label': label
+            }}
         time_pattern = re.search(r"<t>(\d+\.?\d*)</t>", tag_string)
         if time_pattern:
             return {'time': float(time_pattern.group(1)), 'objects': []}
@@ -141,13 +150,22 @@ class VideoQAGIFGenerator:
 
     def _build_step_list(self, text):
         steps = []
-        pattern = re.compile(r"(<obj>.*?<\/obj><box>.*?<\/box>at<t>.*?<\/t>s|<t>.*?<\/t>)")
+        pattern = re.compile(
+            r"(<obj>.*?<\/obj><box>.*?<\/box>at<t>.*?<\/t>s"
+            r"|<motion\s+[^/]*?/>"
+            r"|<t>.*?<\/t>)"
+        )
         segments = pattern.split(text)
         for segment in segments:
             if not segment: continue
             action = self._parse_action_tag(segment)
             if action:
-                steps.append(('action', action, segment.strip()))
+                motion = action.get('motion')
+                if motion:
+                    display_text = f"[{motion['obj']}: {motion['dir']} {motion['speed']} {motion['scale']}]"
+                    steps.append(('action', action, display_text))
+                else:
+                    steps.append(('action', action, segment.strip()))
             else:
                 words = segment.strip().split()
                 for word in words:
@@ -213,18 +231,19 @@ class VideoQAGIFGenerator:
             
             if step_type == 'action':
                 action_data = content
-                current_time = action_data['time']
-                cap.set(cv2.CAP_PROP_POS_MSEC, current_time * 1000)
-                ret, frame = cap.read()
-                if ret:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    current_frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
-                    frame_to_show = current_frame_pil.copy()
-                    if action_data['objects']: frame_to_show = self._draw_boxes_on_frame(frame_to_show, action_data['objects'])
-                    frame_to_show = self._draw_timestamp_and_progress(frame_to_show, current_time, total_duration)
-                else:
-                    print(f"警告: 无法跳转到视频的 {current_time}秒。")
-                pause_duration = 1.5
+                current_time = action_data.get('time')
+                if current_time is not None:
+                    cap.set(cv2.CAP_PROP_POS_MSEC, current_time * 1000)
+                    ret, frame = cap.read()
+                    if ret:
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        current_frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
+                        frame_to_show = current_frame_pil.copy()
+                        if action_data['objects']: frame_to_show = self._draw_boxes_on_frame(frame_to_show, action_data['objects'])
+                        frame_to_show = self._draw_timestamp_and_progress(frame_to_show, current_time, total_duration)
+                    else:
+                        print(f"警告: 无法跳转到视频的 {current_time}秒。")
+                pause_duration = 1.5 if current_time is not None else 0.8
 
             text_panel = self._create_text_panel(current_display_list, total_w, text_panel_h)
             combined_img = Image.new('RGB', (total_w, total_h))

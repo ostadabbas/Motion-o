@@ -10,6 +10,7 @@ LOG = logging.getLogger("tts_video")
 LOG.setLevel(logging.INFO)
 
 pattern = r"<obj>(.*?)</obj><box>(\[.*?\])</box>at<t>(.*?)</t>s"
+motion_pattern = r'<motion\s+obj="([^"]*?)"\s+dir="([^"]*?)"\s+speed="([^"]*?)"\s+scale="([^"]*?)"\s*/>'
 
 def parse_box(box_str):
     clean = box_str.strip().replace(" ", "")
@@ -29,6 +30,19 @@ def parse_box(box_str):
         return None
 
 
+def parse_motion_tags(text):
+    """Parse <motion obj="..." dir="..." speed="..." scale="..."/> tags."""
+    out = []
+    for match in re.finditer(motion_pattern, text):
+        out.append({
+            "obj": match.group(1).strip(),
+            "dir": match.group(2).strip(),
+            "speed": match.group(3).strip(),
+            "scale": match.group(4).strip(),
+        })
+    return out
+
+
 def parse_patterns(text):
     out = []
     for match in re.finditer(pattern, text, re.DOTALL):
@@ -42,6 +56,14 @@ def parse_patterns(text):
         box_xyxy = parse_box(box_raw)
         if t_sec is not None and box_xyxy is not None:
             out.append({"obj": obj, "box_xyxy": box_xyxy, "t_sec": t_sec})
+
+    motions = parse_motion_tags(text)
+    if motions:
+        motion_by_obj = {m["obj"]: m for m in motions}
+        for item in out:
+            if item["obj"] in motion_by_obj:
+                item["motion"] = motion_by_obj[item["obj"]]
+
     return out
 
 def read_frame_at_time(frames, fps, t_sec):
