@@ -205,8 +205,24 @@ def inference(video_path, prompt, model, fps=1.0):
     else:
         prompt = frame_prompt + prompt
 
+    system_msg = (
+        "A conversation between user and assistant. The user provides a video and asks a question, "
+        "and the Assistant solves it. The assistant MUST first think about the reasoning process in the mind "
+        "and then provide the user with the answer. The reasoning process and answer are enclosed within "
+        "<think> </think> and <answer> </answer> tags, respectively. All reasoning must be grounded in visual "
+        "evidence from the video. When you mention any related object, person, or specific visual element "
+        "in the reasoning process, you must strictly follow the following format: "
+        "`<obj>object_name</obj><box>bounding_box</box>at<t>time_in_seconds</t>s`. "
+        "After the last observation of each object, you MUST describe its motion trajectory using a self-closing "
+        "motion tag with discrete attributes: "
+        '`<motion obj="object_name" dir="DIRECTION" speed="SPEED" scale="SCALE"/>` '
+        "where DIRECTION is one of {N, NE, E, SE, S, SW, W, NW, STAT}, "
+        "SPEED is one of {stationary, slow, moderate, fast}, "
+        "and SCALE is one of {approaching, stable, receding}. "
+        "The answer part only requires a text response; tags like <obj>, <box>, <t> are not needed."
+    )
     messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": system_msg},
         {
             "role": "user",
             "content": [
