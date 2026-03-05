@@ -25,7 +25,8 @@ def main():
     parser.add_argument("--video_dir", type=str, default="/scratch/bai.xiang/eval_benchmarks/V-STaR/videos",
                         help="Directory containing V-STaR video files")
     parser.add_argument("--output_dir", type=str, default="./output_gif", help="Output directory for GIFs")
-    parser.add_argument("--task", type=str, default="vqa", choices=["vqa", "temporal", "spatial"],
+    parser.add_argument("--task", type=str, default="vqa",
+                        choices=["vqa", "temporal", "spatial", "temporal2", "spatial2"],
                         help="Which model output to visualize")
     parser.add_argument("--max_samples", type=int, default=5, help="Max number of GIFs to generate")
     parser.add_argument("--indices", type=str, default=None,
@@ -47,6 +48,8 @@ def main():
         "vqa": "answer_vqa_raw_output",
         "temporal": "answer_temporal_pre",
         "spatial": "answer_spatial_pre",
+        "temporal2": "answer_temporal_pre_2",
+        "spatial2": "answer_spatial_pre_2",
     }
     output_field = field_map[args.task]
 
@@ -78,6 +81,8 @@ def main():
             "vqa": "question",
             "temporal": "temporal_question",
             "spatial": "spatial_question",
+            "temporal2": "temporal_question",
+            "spatial2": "spatial_question_2",
         }[args.task]
         question = entry.get(question_key, entry.get("question", ""))
 
