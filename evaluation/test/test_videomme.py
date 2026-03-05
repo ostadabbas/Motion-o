@@ -367,6 +367,7 @@ def main():
     metrics, results = evaluate(args, num_gpus=num_gpus, gpu_list=gpu_list)
 
     metrics_path = f"./logs/videomme_logs/metrics_{args.exp_name}.json"
+    os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
     with open(metrics_path, "w", encoding="utf-8") as file:
         json.dump(metrics, file, ensure_ascii=False, indent=4)
 
