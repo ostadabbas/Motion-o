@@ -100,17 +100,17 @@ fi
 source /projects/zura-storage/Workspace/dora/env_eval/bin/activate
 export PYTHONPATH="$(pwd):$(pwd)/evaluation"
 
+SAMPLES_ARG=""
+if [ -n "$MAX_SAMPLES" ]; then
+    SAMPLES_ARG="--max_samples $MAX_SAMPLES"
+fi
+
 # ================================================================
 # Step 2: V-STaR
 # ================================================================
 echo ""
 echo "[Step 2/5] V-STaR evaluation..."
 mkdir -p ./evaluation/logs/vstar_logs
-
-SAMPLES_ARG=""
-if [ -n "$MAX_SAMPLES" ]; then
-    SAMPLES_ARG="--max_samples $MAX_SAMPLES"
-fi
 
 NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_vstar_multi_images.py \
     --video_folder "$VSTAR_VIDEO_FOLDER" \
