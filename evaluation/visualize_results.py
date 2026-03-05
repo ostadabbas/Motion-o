@@ -112,6 +112,8 @@ def main():
                     target_size=(args.target_width, args.target_height),
                     prefix="frame",
                 )
+                with open(os.path.join(frame_dir, "entry.json"), "w") as jf:
+                    json.dump(entry, jf, indent=2, ensure_ascii=False)
             else:
                 out_path = os.path.join(args.output_dir, f"{args.task}_{idx}_{safe_vid}.gif")
                 generator.create_demo_gif(

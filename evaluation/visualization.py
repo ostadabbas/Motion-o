@@ -271,7 +271,7 @@ class VideoQAGIFGenerator:
 
     def create_keyframes(self, video_path, question, reasoning, answer, output_dir,
                          target_size=(640, 360), prefix="frame"):
-        """Save key frames as individual PNGs instead of a GIF."""
+        """Save raw video frames with bounding boxes + a text file with model output."""
         if not os.path.exists(video_path): raise FileNotFoundError(f"Video not found: {video_path}")
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened(): raise IOError(f"Cannot open video: {video_path}")
@@ -281,8 +281,6 @@ class VideoQAGIFGenerator:
         total_duration = frame_count / video_fps if video_fps > 0 else 0
 
         video_w, video_h = target_size
-        text_panel_h = 250
-        total_w, total_h = video_w, video_h + text_panel_h
         os.makedirs(output_dir, exist_ok=True)
 
         ret, frame = cap.read()
@@ -290,83 +288,63 @@ class VideoQAGIFGenerator:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         current_frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
 
-        def add_colors_to_steps(steps, start_index=0):
-            colored_steps, color_idx = [], start_index
-            for step in steps:
-                if step[0] == 'action':
-                    color = self.highlight_colors[color_idx % len(self.highlight_colors)]
-                    colored_steps.append((*step, color))
-                    color_idx += 1
-                else:
-                    colored_steps.append(step)
-            return colored_steps, color_idx
-
-        question_header_steps = [('header', f'Question: {question}')]
-        reasoning_steps, color_index = add_colors_to_steps(self._build_step_list(reasoning))
-        answer_steps, _ = add_colors_to_steps(self._build_step_list(answer), color_index)
-
-        all_steps = question_header_steps.copy()
-        all_steps.append(('header', '\nReasoning Process: '))
-        all_steps.extend(reasoning_steps)
-        all_steps.append(('header', '\nAnswer: '))
-        all_steps.extend(answer_steps)
-
+        reasoning_steps = self._build_step_list(reasoning)
         saved = []
 
-        # Save question frame
-        text_panel = self._create_text_panel(question_header_steps, total_w, text_panel_h)
-        combined = Image.new('RGB', (total_w, total_h))
-        combined.paste(current_frame_pil, (0, 0))
-        combined.paste(text_panel, (0, video_h))
-        path = os.path.join(output_dir, f"{prefix}_00_question.png")
-        combined.save(path)
+        # Save first frame (no boxes)
+        path = os.path.join(output_dir, f"{prefix}_00_start.png")
+        current_frame_pil.save(path)
         saved.append(path)
 
-        # Save each action frame (grounding events)
+        # Save each action frame with bounding boxes
         action_idx = 0
-        for i, step in enumerate(all_steps):
+        for step in reasoning_steps:
             step_type, content, *_ = step
             if step_type != 'action':
                 continue
 
             action_data = content
             current_time = action_data.get('time')
-            frame_to_show = current_frame_pil
+            if current_time is None:
+                continue
 
-            if current_time is not None:
-                cap.set(cv2.CAP_PROP_POS_MSEC, current_time * 1000)
-                ret, frame = cap.read()
-                if ret:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    current_frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
-                    frame_to_show = current_frame_pil.copy()
-                    if action_data['objects']:
-                        frame_to_show = self._draw_boxes_on_frame(frame_to_show, action_data['objects'])
-                    frame_to_show = self._draw_timestamp_and_progress(frame_to_show, current_time, total_duration)
+            cap.set(cv2.CAP_PROP_POS_MSEC, current_time * 1000)
+            ret, frame = cap.read()
+            if not ret:
+                continue
 
-            display_list = all_steps[:i+1]
-            text_panel = self._create_text_panel(display_list, total_w, text_panel_h)
-            combined = Image.new('RGB', (total_w, total_h))
-            combined.paste(frame_to_show, (0, 0))
-            combined.paste(text_panel, (0, video_h))
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
+
+            frame_with_boxes = frame_pil.copy()
+            if action_data['objects']:
+                frame_with_boxes = self._draw_boxes_on_frame(frame_with_boxes, action_data['objects'])
 
             action_idx += 1
-            label = "motion" if action_data.get('motion') else f"{current_time:.1f}s"
-            path = os.path.join(output_dir, f"{prefix}_{action_idx:02d}_{label}.png")
-            combined.save(path)
-            saved.append(path)
+            obj_name = action_data['objects'][0]['name'] if action_data['objects'] else "event"
+            safe_name = re.sub(r'[^\w]', '_', obj_name)[:20]
 
-        # Save final frame with full reasoning + answer
-        text_panel = self._create_text_panel(all_steps, total_w, text_panel_h)
-        combined = Image.new('RGB', (total_w, total_h))
-        combined.paste(current_frame_pil, (0, 0))
-        combined.paste(text_panel, (0, video_h))
-        path = os.path.join(output_dir, f"{prefix}_{action_idx+1:02d}_final.png")
-        combined.save(path)
-        saved.append(path)
+            # Save raw frame (no boxes)
+            raw_path = os.path.join(output_dir, f"{prefix}_{action_idx:02d}_{current_time:.1f}s_raw.png")
+            frame_pil.save(raw_path)
+            saved.append(raw_path)
+
+            # Save frame with bounding boxes
+            box_path = os.path.join(output_dir, f"{prefix}_{action_idx:02d}_{current_time:.1f}s_{safe_name}.png")
+            frame_with_boxes.save(box_path)
+            saved.append(box_path)
 
         cap.release()
-        print(f"Saved {len(saved)} keyframes to {output_dir}/")
+
+        # Save text output
+        text_path = os.path.join(output_dir, "output.txt")
+        with open(text_path, "w") as f:
+            f.write(f"Question: {question}\n\n")
+            f.write(f"Reasoning:\n{reasoning}\n\n")
+            f.write(f"Answer: {answer}\n")
+        saved.append(text_path)
+
+        print(f"Saved {len(saved)} files to {output_dir}/")
         return saved
 
 
