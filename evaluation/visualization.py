@@ -269,6 +269,107 @@ class VideoQAGIFGenerator:
         print(f"✅ GIF文件已成功保存到 '{output_path}'")
         cap.release()
 
+    def create_keyframes(self, video_path, question, reasoning, answer, output_dir,
+                         target_size=(640, 360), prefix="frame"):
+        """Save key frames as individual PNGs instead of a GIF."""
+        if not os.path.exists(video_path): raise FileNotFoundError(f"Video not found: {video_path}")
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened(): raise IOError(f"Cannot open video: {video_path}")
+
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        video_fps = cap.get(cv2.CAP_PROP_FPS)
+        total_duration = frame_count / video_fps if video_fps > 0 else 0
+
+        video_w, video_h = target_size
+        text_panel_h = 250
+        total_w, total_h = video_w, video_h + text_panel_h
+        os.makedirs(output_dir, exist_ok=True)
+
+        ret, frame = cap.read()
+        if not ret: raise ValueError("Cannot read first frame.")
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        current_frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
+
+        def add_colors_to_steps(steps, start_index=0):
+            colored_steps, color_idx = [], start_index
+            for step in steps:
+                if step[0] == 'action':
+                    color = self.highlight_colors[color_idx % len(self.highlight_colors)]
+                    colored_steps.append((*step, color))
+                    color_idx += 1
+                else:
+                    colored_steps.append(step)
+            return colored_steps, color_idx
+
+        question_header_steps = [('header', f'Question: {question}')]
+        reasoning_steps, color_index = add_colors_to_steps(self._build_step_list(reasoning))
+        answer_steps, _ = add_colors_to_steps(self._build_step_list(answer), color_index)
+
+        all_steps = question_header_steps.copy()
+        all_steps.append(('header', '\nReasoning Process: '))
+        all_steps.extend(reasoning_steps)
+        all_steps.append(('header', '\nAnswer: '))
+        all_steps.extend(answer_steps)
+
+        saved = []
+
+        # Save question frame
+        text_panel = self._create_text_panel(question_header_steps, total_w, text_panel_h)
+        combined = Image.new('RGB', (total_w, total_h))
+        combined.paste(current_frame_pil, (0, 0))
+        combined.paste(text_panel, (0, video_h))
+        path = os.path.join(output_dir, f"{prefix}_00_question.png")
+        combined.save(path)
+        saved.append(path)
+
+        # Save each action frame (grounding events)
+        action_idx = 0
+        for i, step in enumerate(all_steps):
+            step_type, content, *_ = step
+            if step_type != 'action':
+                continue
+
+            action_data = content
+            current_time = action_data.get('time')
+            frame_to_show = current_frame_pil
+
+            if current_time is not None:
+                cap.set(cv2.CAP_PROP_POS_MSEC, current_time * 1000)
+                ret, frame = cap.read()
+                if ret:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    current_frame_pil = Image.fromarray(frame_rgb).resize((video_w, video_h), Image.Resampling.LANCZOS)
+                    frame_to_show = current_frame_pil.copy()
+                    if action_data['objects']:
+                        frame_to_show = self._draw_boxes_on_frame(frame_to_show, action_data['objects'])
+                    frame_to_show = self._draw_timestamp_and_progress(frame_to_show, current_time, total_duration)
+
+            display_list = all_steps[:i+1]
+            text_panel = self._create_text_panel(display_list, total_w, text_panel_h)
+            combined = Image.new('RGB', (total_w, total_h))
+            combined.paste(frame_to_show, (0, 0))
+            combined.paste(text_panel, (0, video_h))
+
+            action_idx += 1
+            label = "motion" if action_data.get('motion') else f"{current_time:.1f}s"
+            path = os.path.join(output_dir, f"{prefix}_{action_idx:02d}_{label}.png")
+            combined.save(path)
+            saved.append(path)
+
+        # Save final frame with full reasoning + answer
+        text_panel = self._create_text_panel(all_steps, total_w, text_panel_h)
+        combined = Image.new('RGB', (total_w, total_h))
+        combined.paste(current_frame_pil, (0, 0))
+        combined.paste(text_panel, (0, video_h))
+        path = os.path.join(output_dir, f"{prefix}_{action_idx+1:02d}_final.png")
+        combined.save(path)
+        saved.append(path)
+
+        cap.release()
+        print(f"Saved {len(saved)} keyframes to {output_dir}/")
+        return saved
+
+
 def convert_coord_format_gemini(coords, image_size):
     norm_x_min, norm_y_min, norm_x_max, norm_y_max = coords
     width, height = image_size
