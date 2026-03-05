@@ -8,14 +8,10 @@ from visualization import VideoQAGIFGenerator
 
 
 def extract_think_answer(raw_output):
-    think = ""
-    answer = ""
-    m = re.search(r"<think>(.*?)</think>", raw_output, re.DOTALL)
-    if m:
-        think = m.group(1).strip()
+    thinks = re.findall(r"<think>(.*?)</think>", raw_output, re.DOTALL)
+    think = "\n".join(t.strip() for t in thinks) if thinks else ""
     m = re.search(r"<answer>(.*?)</answer>", raw_output, re.DOTALL)
-    if m:
-        answer = m.group(1).strip()
+    answer = m.group(1).strip() if m else ""
     return think, answer
 
 
