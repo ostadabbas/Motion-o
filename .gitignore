@@ -54,3 +54,8 @@ Open-o3-Video
 *.zip
 *.tar.gz
 evaluation/logs/
+evaluation/output_gif_motion_o/
+evaluation/output_gif_motion_o_dense/
+evaluation/output_gif_v2/
+evaluation/output_gif_v3/
+evaluation/qual_examples/

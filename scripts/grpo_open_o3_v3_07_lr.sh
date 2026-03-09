@@ -3,12 +3,12 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h200:2
 #SBATCH --time=23:59:59
-#SBATCH --job-name=open-o3_grpo_v3
+#SBATCH --job-name=open-o3_grpo_v3_07
 #SBATCH --mem=128GB
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --output=logs/open-o3_grpo_v3_%j.out
-#SBATCH --error=logs/open-o3_grpo_v3_%j.err
+#SBATCH --output=logs/open-o3_grpo_v3_07_%j.out
+#SBATCH --error=logs/open-o3_grpo_v3_07_%j.err
 
 set -euo pipefail
 
@@ -34,7 +34,7 @@ export DEBUG_GROUNDING_REWARD=1
 
 # Config
 MODEL_PATH="outputs/open-o3_motion_sft_4666166/merged"
-EXP_NAME="open-o3_grpo_v3_${SLURM_JOB_ID}"
+EXP_NAME="open-o3_grpo_v3_07${SLURM_JOB_ID}"
 OUT_DIR="outputs/${EXP_NAME}"
 DATA_ROOT="/scratch/bai.xiang/Open-o3-Video"
 # DATASET_JSON="${DATA_ROOT}/json_data/STGR-RL-filtered-motion-densebbox.json"
@@ -92,7 +92,7 @@ torchrun \
     --report_to wandb \
     --run_name $EXP_NAME \
     --seed 42 \
-    --gen_temperature 1.0 \
+    --gen_temperature 0.7 \
     $RESUME_ARG \
     --reward_funcs ans_acc ans_tiou ans_viou thk_temporal_point thk_temporal_segment thk_spatial motion_trajectory motion_grounding format
 

@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --partition=multigpu
+#SBATCH --partition=sharing
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:h200:1
-#SBATCH --time=23:59:59
+#SBATCH --gres=gpu:h100:1
+#SBATCH --time=00:59:59
 #SBATCH --job-name=eval_all_h200
 #SBATCH --mem=64GB
 #SBATCH --ntasks=1
@@ -143,20 +143,20 @@ export PYTHONPATH="$(pwd):$(pwd)/evaluation"
 # ================================================================
 # Step 4: VideoMMMU
 # ================================================================
-echo ""
-echo "[Step 4/5] VideoMMMU evaluation..."
-mkdir -p ./evaluation/logs/videommmu_logs
+# echo ""
+# echo "[Step 4/5] VideoMMMU evaluation..."
+# mkdir -p ./evaluation/logs/videommmu_logs
 
-NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_videommmu.py \
-    --exp_name "${EXP_NAME}_videommmu" \
-    --data_dir "$VMMMU_DATA_DIR" \
-    --model_path "$MERGED_DIR" \
-    --model_kwargs ./evaluation/config/video_mmmu.yaml \
-    --N 1 \
-    --vote 'majority_voting' \
-    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videommmu_logs/${EXP_NAME}_videommmu.log" || echo "  VideoMMMU FAILED — continuing"
+# NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_videommmu.py \
+#     --exp_name "${EXP_NAME}_videommmu" \
+#     --data_dir "$VMMMU_DATA_DIR" \
+#     --model_path "$MERGED_DIR" \
+#     --model_kwargs ./evaluation/config/video_mmmu.yaml \
+#     --N 1 \
+#     --vote 'majority_voting' \
+#     --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videommmu_logs/${EXP_NAME}_videommmu.log" || echo "  VideoMMMU FAILED — continuing"
 
-echo "  VideoMMMU done!"
+# echo "  VideoMMMU done!"
 
 # ================================================================
 # Step 5: WorldSense
