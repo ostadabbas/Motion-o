@@ -270,12 +270,6 @@ motion_reward = 0.5*direction + 0.5*speed
 
 ---
 
-## Hardware Requirements
-
-- **GPU**: 8x A100 (40GB) or 8x V100 (32GB)
-- **CPU**: 32+ cores for data loading
-- **Storage**: ~500GB for STGR dataset
-- **Memory**: ~200GB RAM recommended
 
 **Smaller setups:**
 - 4x GPUs: Reduce `per_device_train_batch_size`, increase `gradient_accumulation_steps`
