@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --partition=sharing
+#SBATCH --partition=multigpu
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:h100:1
-#SBATCH --time=00:59:59
+#SBATCH --gres=gpu:h200:1
+#SBATCH --time=07:59:59
 #SBATCH --job-name=eval_all_h200
 #SBATCH --mem=64GB
 #SBATCH --ntasks=1
@@ -103,42 +103,42 @@ export PYTHONPATH="$(pwd):$(pwd)/evaluation"
 # ================================================================
 # Step 2: V-STaR
 # ================================================================
-# echo ""
-# echo "[Step 2/5] V-STaR evaluation..."
-# mkdir -p ./evaluation/logs/vstar_logs
+echo ""
+echo "[Step 2/5] V-STaR evaluation..."
+mkdir -p ./evaluation/logs/vstar_logs
 
-# SAMPLES_ARG=""
-# if [ -n "$MAX_SAMPLES" ]; then
-#     SAMPLES_ARG="--max_samples $MAX_SAMPLES"
-# fi
+SAMPLES_ARG=""
+if [ -n "$MAX_SAMPLES" ]; then
+    SAMPLES_ARG="--max_samples $MAX_SAMPLES"
+fi
 
-# NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_vstar_multi_images.py \
-#     --video_folder "$VSTAR_VIDEO_FOLDER" \
-#     --anno_file "$VSTAR_ANNO_FILE" \
-#     --result_file "./evaluation/logs/vstar_logs/${EXP_NAME}_vstar.json" \
-#     --model_path "$MERGED_DIR" \
-#     --model_kwargs ./evaluation/config/vstar.yaml \
-#     --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/vstar_logs/test_${EXP_NAME}_vstar.log" || echo "  V-STaR FAILED — continuing"
+NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_vstar_multi_images.py \
+    --video_folder "$VSTAR_VIDEO_FOLDER" \
+    --anno_file "$VSTAR_ANNO_FILE" \
+    --result_file "./evaluation/logs/vstar_logs/${EXP_NAME}_vstar.json" \
+    --model_path "$MERGED_DIR" \
+    --model_kwargs ./evaluation/config/vstar.yaml \
+    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/vstar_logs/test_${EXP_NAME}_vstar.log" || echo "  V-STaR FAILED — continuing"
 
-# echo "  V-STaR done!"
+echo "  V-STaR done!"
 
 # ================================================================
 # Step 3: Video-MME
 # ================================================================
-# echo ""
-# echo "[Step 3/5] Video-MME evaluation..."
-# mkdir -p ./evaluation/logs/videomme_logs
+echo ""
+echo "[Step 3/5] Video-MME evaluation..."
+mkdir -p ./evaluation/logs/videomme_logs
 
-# NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_videomme.py \
-#     --exp_name "${EXP_NAME}_mme" \
-#     --data_dir "$VMME_DATA_DIR" \
-#     --model_path "$MERGED_DIR" \
-#     --model_kwargs ./evaluation/config/video_mme.yaml \
-#     --N 1 \
-#     --vote 'majority_voting' \
-#     --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videomme_logs/${EXP_NAME}_mme.log" || echo "  Video-MME FAILED — continuing"
+NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_videomme.py \
+    --exp_name "${EXP_NAME}_mme" \
+    --data_dir "$VMME_DATA_DIR" \
+    --model_path "$MERGED_DIR" \
+    --model_kwargs ./evaluation/config/video_mme.yaml \
+    --N 1 \
+    --vote 'majority_voting' \
+    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videomme_logs/${EXP_NAME}_mme.log" || echo "  Video-MME FAILED — continuing"
 
-# echo "  Video-MME done!"
+echo "  Video-MME done!"
 
 # ================================================================
 # Step 4: VideoMMMU
@@ -161,20 +161,20 @@ export PYTHONPATH="$(pwd):$(pwd)/evaluation"
 # ================================================================
 # Step 5: WorldSense
 # ================================================================
-echo ""
-echo "[Step 5/5] WorldSense evaluation..."
-mkdir -p ./evaluation/logs/world_logs
+# echo ""
+# echo "[Step 5/5] WorldSense evaluation..."
+# mkdir -p ./evaluation/logs/world_logs
 
-NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_worldsense.py \
-    --exp_name "${EXP_NAME}_wds" \
-    --data_dir "$WS_DATA_DIR" \
-    --model_path "$MERGED_DIR" \
-    --model_kwargs ./evaluation/config/world_sense.yaml \
-    --N 1 \
-    --vote 'majority_voting' \
-    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/world_logs/${EXP_NAME}_wds.log" || echo "  WorldSense FAILED — continuing"
+# NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_worldsense.py \
+#     --exp_name "${EXP_NAME}_wds" \
+#     --data_dir "$WS_DATA_DIR" \
+#     --model_path "$MERGED_DIR" \
+#     --model_kwargs ./evaluation/config/world_sense.yaml \
+#     --N 1 \
+#     --vote 'majority_voting' \
+#     --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/world_logs/${EXP_NAME}_wds.log" || echo "  WorldSense FAILED — continuing"
 
-echo "  WorldSense done!"
+# echo "  WorldSense done!"
 
 # ================================================================
 # Summary

@@ -143,38 +143,38 @@ echo "  Video-MME done!"
 # ================================================================
 # Step 4: VideoMMMU
 # ================================================================
-echo ""
-echo "[Step 4/5] VideoMMMU evaluation..."
-mkdir -p ./evaluation/logs/videommmu_logs
+# echo ""
+# echo "[Step 4/5] VideoMMMU evaluation..."
+# mkdir -p ./evaluation/logs/videommmu_logs
 
-NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_videommmu.py \
-    --exp_name "${EXP_NAME}_videommmu" \
-    --data_dir "$VMMMU_DATA_DIR" \
-    --model_path "$MERGED_DIR" \
-    --model_kwargs ./evaluation/config/video_mmmu.yaml \
-    --N 1 \
-    --vote 'majority_voting' \
-    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videommmu_logs/${EXP_NAME}_videommmu.log" || echo "  VideoMMMU FAILED — continuing"
+# NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_videommmu.py \
+#     --exp_name "${EXP_NAME}_videommmu" \
+#     --data_dir "$VMMMU_DATA_DIR" \
+#     --model_path "$MERGED_DIR" \
+#     --model_kwargs ./evaluation/config/video_mmmu.yaml \
+#     --N 1 \
+#     --vote 'majority_voting' \
+#     --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/videommmu_logs/${EXP_NAME}_videommmu.log" || echo "  VideoMMMU FAILED — continuing"
 
-echo "  VideoMMMU done!"
+# echo "  VideoMMMU done!"
 
 # ================================================================
 # Step 5: WorldSense
 # ================================================================
-echo ""
-echo "[Step 5/5] WorldSense evaluation..."
-mkdir -p ./evaluation/logs/world_logs
+# echo ""
+# echo "[Step 5/5] WorldSense evaluation..."
+# mkdir -p ./evaluation/logs/world_logs
 
-NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_worldsense.py \
-    --exp_name "${EXP_NAME}_wds" \
-    --data_dir "$WS_DATA_DIR" \
-    --model_path "$MERGED_DIR" \
-    --model_kwargs ./evaluation/config/world_sense.yaml \
-    --N 1 \
-    --vote 'majority_voting' \
-    --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/world_logs/${EXP_NAME}_wds.log" || echo "  WorldSense FAILED — continuing"
+# NUM_GPUS=$NUM_EVAL_GPUS CUDA_VISIBLE_DEVICES=$GPU_IDS python ./evaluation/test/test_worldsense.py \
+#     --exp_name "${EXP_NAME}_wds" \
+#     --data_dir "$WS_DATA_DIR" \
+#     --model_path "$MERGED_DIR" \
+#     --model_kwargs ./evaluation/config/world_sense.yaml \
+#     --N 1 \
+#     --vote 'majority_voting' \
+#     --think_mode $SAMPLES_ARG 2>&1 | tee "./evaluation/logs/world_logs/${EXP_NAME}_wds.log" || echo "  WorldSense FAILED — continuing"
 
-echo "  WorldSense done!"
+# echo "  WorldSense done!"
 
 # ================================================================
 # Summary

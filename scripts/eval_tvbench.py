@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """
-Evaluate a video QA model on [MVBench](https://huggingface.co/datasets/OpenGVLab/MVBench).
+Evaluate a video QA model on TVBench (https://huggingface.co/datasets/FunAILab/TVBench).
 
-Loads the Hugging Face dataset (20 subsets, 200 samples each), runs vLLM inference
-with video + multiple-choice question, and reports accuracy per subset and overall.
-Videos must be available under --video_dir (see DATASET_DOWNLOAD or MVBench repo for layout).
+TVBench is a temporal-understanding video QA benchmark with 10 subsets (~2,525 samples).
+It shares the same column schema as MVBench (video, question, answer, candidates)
+but is specifically designed to require genuine temporal reasoning.
+
+Videos must be available under --video_dir. Clone the HF repo to get them:
+    git lfs install
+    git clone https://huggingface.co/datasets/FunAILab/TVBench
+    # Videos are under TVBench/video/<subset_name>/
+    # Exception: action_antonym requires NTU RGB+D videos (manual download).
 
 Usage:
-    python scripts/eval_mvbench.py \
+    python scripts/eval_tvbench.py \
         --model_path outputs/.../merged \
-        --video_dir /path/to/MVBench/video \
-        [--subsets action_antonym moving_direction] \
-        [--max_samples_per_subset 50] \
-        --output_file evaluation/logs/mvbench_results.json
+        --video_dir /path/to/TVBench/video \
+        [--subsets action_count moving_direction] \
+        [--max_samples_per_subset 20] \
+        --output_file evaluation/logs/tvbench_results.json
 """
 
 import argparse
@@ -28,69 +34,35 @@ from transformers import AutoProcessor
 from qwen_vl_utils import process_vision_info
 
 
-# All 20 MVBench subsets (Hugging Face subset names)
-MVBENCH_SUBSETS = [
+# All 10 TVBench subsets
+TVBENCH_SUBSETS = [
     "action_antonym",
     "action_count",
     "action_localization",
-    "action_prediction",
     "action_sequence",
-    "character_order",
-    "counterfactual_inference",
-    "egocentric_navigation",
-    "episodic_reasoning",
-    "fine_grained_action",
-    "fine_grained_pose",
-    "moving_attribute",
-    "moving_count",
+    "egocentric_sequence",
     "moving_direction",
-    "object_existence",
-    "object_interaction",
+    "object_count",
     "object_shuffle",
     "scene_transition",
-    "state_change",
     "unexpected_action",
 ]
 
-# Mapping from subset name to the subdirectory under --video_dir where its videos live
-SUBSET_VIDEO_PREFIX = {
-    "action_antonym":           "ssv2_video",
-    "action_count":             "perception/videos",
-    "action_localization":      "sta/sta_video",
-    "action_prediction":        "star/Charades_v1_480",
-    "action_sequence":          "star/Charades_v1_480",
-    "character_order":          "perception/videos",
-    "counterfactual_inference": "clevrer/video_validation",
-    "egocentric_navigation":    "vlnqa",
-    "episodic_reasoning":       "tvqa/frames_fps3_hq",
-    "fine_grained_action":      "Moments_in_Time_Raw/videos",
-    "fine_grained_pose":        "",  # NTU RGB+D — requires manual download from ROSE Lab
-    "moving_attribute":         "clevrer/video_validation",
-    "moving_count":             "clevrer/video_validation",
-    "moving_direction":         "clevrer/video_validation",
-    "object_existence":         "clevrer/video_validation",
-    "object_interaction":       "star/Charades_v1_480",
-    "object_shuffle":           "clevrer/video_validation",
-    "scene_transition":         "scene_qa/video",
-    "state_change":             "perception/videos",
-    "unexpected_action":        "FunQA_test/test",
-}
-
-MVBENCH_SYSTEM_PROMPT = (
+TVBENCH_SYSTEM_PROMPT = (
     "Carefully watch the video and pay attention to the cause and sequence of events, "
     "the detail and movement of objects, and the action and pose of persons. "
-    "Based on your observations, select the best option that accurately addresses the question. "
-    "Answer with only the letter (A, B, or C)."
+    "Based on your observations, select the best option that accurately addresses the question."
 )
 
 
 def resolve_video_path(video_dir: str, subset: str, video_filename: str) -> str:
-    """Resolve path using subset-specific prefix, then fallbacks."""
-    prefix = SUBSET_VIDEO_PREFIX.get(subset, "")
+    """
+    Resolve video path. TVBench stores videos under video/<subset_name>/<filename>.
+    Try subset folder first, then root, then common fallbacks.
+    """
     for path in [
-        os.path.join(video_dir, prefix, video_filename) if prefix else "",
-        os.path.join(video_dir, video_filename),
         os.path.join(video_dir, subset, video_filename),
+        os.path.join(video_dir, video_filename),
         os.path.join(video_dir, subset, "video", video_filename),
     ]:
         if path and (os.path.isfile(path) or os.path.isdir(path)):
@@ -99,21 +71,21 @@ def resolve_video_path(video_dir: str, subset: str, video_filename: str) -> str:
 
 
 def build_qa_prompt(question: str, candidates: list) -> str:
-    """Build multiple-choice prompt: Question + Options (A/B/C)."""
+    """Build multiple-choice prompt with dynamic number of options."""
     prompt = f"Question: {question}\nOptions:\n"
     for i, c in enumerate(candidates):
         prompt += f"({chr(ord('A') + i)}) {c}\n"
     prompt = prompt.rstrip()
-    prompt += "\nAnswer with only the letter (A, B, or C)."
+    option_letters = ", ".join(chr(ord('A') + i) for i in range(len(candidates)))
+    prompt += f"\nAnswer with only the letter ({option_letters})."
     return prompt
 
 
 def get_gt_index(candidates: list, answer: str) -> int:
-    """Ground truth: index of answer in candidates (0/1/2 -> A/B/C)."""
+    """Ground truth: index of answer in candidates."""
     try:
         return candidates.index(answer)
     except ValueError:
-        # Normalize: strip, case-insensitive
         answer_lower = answer.strip().lower()
         for i, c in enumerate(candidates):
             if c.strip().lower() == answer_lower:
@@ -121,17 +93,15 @@ def get_gt_index(candidates: list, answer: str) -> int:
     return -1
 
 
-def extract_pred_letter(text: str, num_options: int = 3) -> int:
+def extract_pred_letter(text: str, num_options: int) -> int:
     """
     Extract predicted option index from model output.
-    Looks for (A), (B), (C) or A., B., C. or "A)" etc. Returns -1 if unclear.
+    Handles (A), A), A., standalone A, etc. Returns -1 if unclear.
     """
     text = text.strip().split("\n")[0]  # first line only
-    text_upper = text.upper()
     for i in range(min(num_options, 26)):
         letter = chr(ord("A") + i)
-        # (A), A), A., "A"
-        if f"({letter})" in text or f"({letter})" in text_upper:
+        if f"({letter})" in text.upper():
             return i
         if re.search(rf"\b{letter}\s*[\.\)\:]", text, re.IGNORECASE):
             return i
@@ -143,7 +113,7 @@ def extract_pred_letter(text: str, num_options: int = 3) -> int:
 def build_vllm_input(processor, video_path: str, prompt: str, video_max_pixels: int, video_max_frames: int):
     """Build one vLLM input dict: video + text prompt."""
     messages = [
-        {"role": "system", "content": MVBENCH_SYSTEM_PROMPT},
+        {"role": "system", "content": TVBENCH_SYSTEM_PROMPT},
         {
             "role": "user",
             "content": [
@@ -164,12 +134,12 @@ def build_vllm_input(processor, video_path: str, prompt: str, video_max_pixels: 
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate on MVBench (OpenGVLab/MVBench)")
+    parser = argparse.ArgumentParser(description="Evaluate on TVBench (FunAILab/TVBench)")
     parser.add_argument("--model_path", required=True, help="Path to merged model (full HF-style dir)")
-    parser.add_argument("--video_dir", required=True, help="Root dir for MVBench videos (e.g. .../MVBench/video)")
+    parser.add_argument("--video_dir", required=True, help="Root dir for TVBench videos (e.g. .../TVBench/video)")
     parser.add_argument("--output_file", default=None, help="JSON output path")
-    parser.add_argument("--subsets", nargs="*", default=None, help="Subset names to run (default: all 20)")
-    parser.add_argument("--max_samples_per_subset", type=int, default=None, help="Cap samples per subset (e.g. 10 for quick test)")
+    parser.add_argument("--subsets", nargs="*", default=None, help="Subset names to run (default: all 10)")
+    parser.add_argument("--max_samples_per_subset", type=int, default=None, help="Cap samples per subset")
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--max_tokens", type=int, default=256)
@@ -179,24 +149,22 @@ def main():
     parser.add_argument("--max_model_len", type=int, default=8192)
     args = parser.parse_args()
 
-    subsets = args.subsets or MVBENCH_SUBSETS
+    subsets = args.subsets or TVBENCH_SUBSETS
     video_dir = os.path.abspath(args.video_dir)
     if not os.path.isdir(video_dir):
         print(f"ERROR: video_dir not found: {video_dir}")
         return 1
 
     # ── Load dataset per subset ──
-    print("Loading MVBench from Hugging Face (OpenGVLab/MVBench)...")
-    all_samples = []  # list of (subset, row_index, row_dict, video_path, prompt, gt_index)
+    print("Loading TVBench from Hugging Face (FunAILab/TVBench)...")
+    all_samples = []
     for subset in subsets:
-        if subset == "fine_grained_pose" and not SUBSET_VIDEO_PREFIX.get("fine_grained_pose"):
-            print(f"  SKIP: {subset} (NTU RGB+D videos require manual download from ROSE Lab)")
-            continue
         try:
-            ds = load_dataset("OpenGVLab/MVBench", subset, split="train")
+            ds = load_dataset("FunAILab/TVBench", subset, split="train")
         except Exception as e:
             print(f"  WARN: Could not load subset '{subset}': {e}")
             continue
+        subset_count = 0
         for idx, row in enumerate(ds):
             video_filename = row.get("video") or row.get("video_id", "")
             if isinstance(video_filename, list):
@@ -214,9 +182,9 @@ def main():
                 continue
             prompt = build_qa_prompt(question, candidates)
             all_samples.append((subset, idx, row, video_path, prompt, gt_index))
+            subset_count += 1
+        print(f"  {subset}: {subset_count}/{len(ds)} samples with valid video path")
 
-        n_valid = sum(1 for s, _, _, p, _, _ in all_samples if s == subset and p)
-        print(f"  {subset}: {n_valid}/{len(ds)} samples with valid video path")
     if not all_samples:
         print("ERROR: No samples with valid video paths. Check --video_dir and dataset layout.")
         return 1
@@ -275,11 +243,18 @@ def main():
         outputs = llm.generate(inputs_only, sampling_params=sampling_params)
         for out, (inp, (subset, _, row, _, prompt, gt_index)) in zip(outputs, inputs_and_meta):
             pred_text = out.outputs[0].text
-            pred_index = extract_pred_letter(pred_text, len(row.get("candidates", 3)))
+            num_opts = len(row.get("candidates", []))
+            pred_index = extract_pred_letter(pred_text, num_opts)
             correct = int(pred_index == gt_index)
             results_by_subset[subset]["total"] += 1
             results_by_subset[subset]["correct"] += correct
-            all_preds.append({"subset": subset, "gt": gt_index, "pred": pred_index, "correct": correct})
+            all_preds.append({
+                "subset": subset,
+                "gt": gt_index,
+                "pred": pred_index,
+                "correct": correct,
+                "pred_text": pred_text[:200],
+            })
         done_count += len(inputs_and_meta)
         elapsed = time.time() - t0
         print(f"  {done_count}/{len(all_samples)} ({100*done_count/len(all_samples):.0f}%) — {elapsed:.0f}s")
@@ -291,7 +266,7 @@ def main():
     overall_acc = 100.0 * total_correct / total_count if total_count else 0.0
 
     print("\n" + "=" * 60)
-    print("MVBENCH RESULTS")
+    print("TVBENCH RESULTS")
     print("=" * 60)
     print(f"Overall accuracy: {total_correct}/{total_count} = {overall_acc:.2f}%")
     print(f"Time: {total_time:.0f}s")
@@ -304,16 +279,24 @@ def main():
         print(f"  {sub}: {r['correct']}/{r['total']} = {acc:.2f}%")
 
     out = {
+        "benchmark": "TVBench",
         "model_path": args.model_path,
         "video_dir": video_dir,
         "overall_accuracy_pct": round(overall_acc, 2),
         "total_correct": total_correct,
         "total_count": total_count,
-        "per_subset": {k: {"correct": v["correct"], "total": v["total"], "accuracy_pct": round(100.0 * v["correct"] / v["total"], 2) if v["total"] else 0} for k, v in results_by_subset.items()},
+        "per_subset": {
+            k: {
+                "correct": v["correct"],
+                "total": v["total"],
+                "accuracy_pct": round(100.0 * v["correct"] / v["total"], 2) if v["total"] else 0,
+            }
+            for k, v in results_by_subset.items()
+        },
         "time_seconds": round(total_time, 1),
         "predictions_sample": all_preds[:100],
     }
-    output_file = args.output_file or "evaluation/logs/mvbench_logs/mvbench_results.json"
+    output_file = args.output_file or "evaluation/logs/tvbench_logs/tvbench_results.json"
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, "w") as f:
         json.dump(out, f, indent=2)
