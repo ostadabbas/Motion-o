@@ -96,6 +96,11 @@ def main():
 
         pred = entry.get("pred_answer", entry.get("response", ""))
         gt = entry.get("answer", "")
+        # Only visualize correctly answered samples
+        if not pred or not gt or str(pred).strip() != str(gt).strip():
+            # Uncomment if you want explicit logging:
+            # print(f"[{idx}] Skipping because pred ({pred}) != GT ({gt})")
+            continue
         answer_text = f"Pred: {pred} | GT: {gt}"
 
         question = build_question_text(entry)
