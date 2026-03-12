@@ -283,25 +283,6 @@ motion_reward = 0.5*direction + 0.5*speed
 
 ---
 
-## Citation
-
-```bibtex
-@article{galoaa2026motion,
-  title={Motion-Aware Trajectory Reasoning for Video Understanding},
-  author={Galoaa, Bishoy and Bai, Xiangyu and Ostadabbas, Sarah},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
-  year={2026}
-}
-```
-
-## Documentation
-
-- **`OPEN_O3_ANALYSIS.md`** - Analysis of Open-o3 infrastructure
-- **`IMPLEMENTATION_PLAN.md`** - Step-by-step integration guide
-- **`INTEGRATION.md`** - Technical integration details
-- **`SUMMARY.md`** - Executive summary
-
----
 
 ## License
 
