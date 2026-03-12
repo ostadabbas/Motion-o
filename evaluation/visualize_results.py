@@ -4,6 +4,7 @@ import os
 import re
 import json
 import argparse
+import shutil
 from visualization import VideoQAGIFGenerator
 
 
@@ -115,6 +116,11 @@ def main():
                 )
                 with open(os.path.join(frame_dir, "entry.json"), "w") as jf:
                     json.dump(entry, jf, indent=2, ensure_ascii=False)
+
+                # Also save a copy of the original video into this folder
+                dst_video = os.path.join(frame_dir, os.path.basename(video_path))
+                if not os.path.exists(dst_video):
+                    shutil.copy2(video_path, dst_video)
             else:
                 out_path = os.path.join(args.output_dir, f"{args.task}_{idx}_{safe_vid}.gif")
                 generator.create_demo_gif(
