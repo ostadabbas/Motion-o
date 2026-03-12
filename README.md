@@ -2,13 +2,11 @@
 
 **Training VLMs to reason about video motion through verifiable, motion-aware evidence chains with trajectory-level geometric rewards.**
 
-Built on [Open-o3 Video](https://github.com/marinero4972/Open-o3-Video) infrastructure with motion trajectory rewards as our core contribution.
-
 ## Core Contribution
 
 **Motion-aware trajectory reward** — evaluating not just *where* objects are, but *how they moved*, using geometric motion metrics derived from predicted bbox sequences.
 
-| Aspect | Open-o3 Video | This Work |
+| Aspect | Baseline | This Work |
 |--------|--------------|-----------|
 | **Spatial Reward** | Per-frame IoU (static) | Trajectory-level motion |
 | **Motion Modeling** | Implicit in text | Explicit (direction, speed, smoothness) |
@@ -22,7 +20,7 @@ Built on [Open-o3 Video](https://github.com/marinero4972/Open-o3-Video) infrastr
 - **Speed fidelity** (0.4): Velocity magnitude matching
 - **Trajectory smoothness** (0.2): Acceleration penalty for physically implausible motion
 
-Combined with Open-o3's rewards:
+Combined with baseline reward components:
 - R_spatial (λ=0.25): Bbox IoU via Hungarian matching
 - R_temporal (λ=0.15): Temporal interval IoU  
 - R_caption (λ=0.20): Text similarity
@@ -84,10 +82,68 @@ bash scripts/run_grpo_motion.sh
 
 ### 4. Evaluate
 
+All evaluation commands below assume you are in the project root (`vlmm-mcot/`).
+
+#### 4.1 Full evaluation pipeline (V-STaR + Video-MME + VideoMMMU + WorldSense)
+
+Run the SLURM wrapper on a merged or LoRA checkpoint directory:
+
 ```bash
-cd evaluation
-bash scripts/eval_all.sh
+sbatch scripts/eval_all_h200.sh /path/to/checkpoint-dir 100   # 100 samples per benchmark
+# or
+sbatch scripts/eval_all_h200.sh /path/to/checkpoint-dir       # full benchmarks
 ```
+
+This will:
+- Merge the LoRA adapter into a base model (if needed),
+- Run V-STaR, Video-MME, VideoMMMU, and WorldSense,
+- Write logs/metrics under `logs/` and `evaluation/logs/`.
+
+#### 4.2 V-STaR only (with LLM-as-judge)
+
+```bash
+sbatch scripts/eval_vstar.sh /path/to/checkpoint-dir 100   # optional 2nd arg = max_samples
+```
+
+This script:
+- Merges LoRA → `/path/to/checkpoint-dir/merged`,
+- Runs V-STaR inference,
+- Runs LLM-as-judge scoring using a large judge model.
+
+#### 4.3 Visualizing V-STaR chains (frames + video per sample)
+
+```bash
+python evaluation/visualize_results.py \
+  --result_json /path/to/vstar_results.json \
+  --video_dir /path/to/V-STAR/videos \
+  --output_dir /path/to/output_vstar_frames \
+  --task vqa \
+  --format frames \
+  --max_samples 20
+```
+
+Each sample gets:
+- Keyframes with and without boxes,
+- `entry.json` (raw result entry),
+- A copy of the original `.mp4` video.
+
+#### 4.4 Visualizing Video-MME reasoning (correct answers only)
+
+First, run the Video-MME eval (already done in `eval_all_h200.sh`). Then, for any `metrics_*.json`:
+
+```bash
+python evaluation/visualize_videomme_results.py \
+  --metrics_json /path/to/metrics_model_xxx_mme.json \
+  --video_dir /path/to/Video-MME/data \
+  --output_dir /path/to/output_videomme_vis_model_xxx \
+  --format frames \
+  --max_samples 50
+```
+
+The script:
+- Uses `reasoning_process` from the metrics JSON,
+- Only visualizes samples where `pred_answer == answer`,
+- Saves frames, `entry.json`, and a copy of the original video per sample.
 
 ---
 
@@ -101,7 +157,7 @@ vlmm-mcot/
 │   ├── evidence_parser.py      # Evidence chain parsing
 │   └── [supporting modules]
 │
-├── training/                   # Training infrastructure (from Open-o3)
+├── training/                   # GRPO-based training infrastructure
 │   ├── grpo_trainer.py         # GRPO trainer (808 lines, DeepSpeed)
 │   ├── reward_func.py          # Modular reward functions
 │   ├── motion_reward.py        # ⭐ Our motion trajectory reward
@@ -110,8 +166,9 @@ vlmm-mcot/
 │   └── [data loader, vision processing]
 │
 ├── evaluation/                 # Evaluation suite
-│   ├── test/                   # V-STAR, VideoMME, VideoMMMU, WorldSense
-│   └── scripts/eval_all.sh
+│   ├── test/                   # V-STaR, Video-MME, VideoMMMU, WorldSense
+│   ├── visualize_results.py    # V-STaR visualization (frames / GIF)
+│   └── visualize_videomme_results.py  # Video-MME visualization (frames / GIF)
 │
 ├── configs/                    # Configuration files
 │   ├── data_root.py            # Dataset path configuration
@@ -157,7 +214,7 @@ smoothness = 1 / (1 + std(accel))
 | V-STAR mLGM | 49.0% | 52-56% | +3-7% |
 | Motion-heavy tasks | - | - | +5-10% |
 
-**Justification:** Open-o3's spatial reward is frame-independent. Our reward optimizes trajectory-level motion properties.
+**Justification:** The baseline spatial reward is frame-independent. Our reward optimizes trajectory-level motion properties.
 
 ---
 
@@ -237,18 +294,6 @@ motion_reward = 0.5*direction + 0.5*speed
 }
 ```
 
-Built upon [Open-o3 Video](https://github.com/marinero4972/Open-o3-Video):
-```bibtex
-@article{meng2025openo3,
-  title={Open-o3 Video: Grounded Video Reasoning with Explicit Spatio-Temporal Evidence},
-  author={Meng, Jiahao and Li, Xiangtai and Wang, Haochen and others},
-  journal={arXiv preprint arXiv:2510.20579},
-  year={2025}
-}
-```
-
----
-
 ## Documentation
 
 - **`OPEN_O3_ANALYSIS.md`** - Analysis of Open-o3 infrastructure
@@ -266,4 +311,13 @@ MIT License
 
 ## Acknowledgments
 
-This work builds on the excellent infrastructure provided by [Open-o3 Video](https://github.com/marinero4972/Open-o3-Video). We use their GRPO trainer, STGR dataset, and evaluation suite while contributing motion-aware trajectory rewards for improved motion reasoning.
+This work builds on the STGR dataset and training / evaluation infrastructure released as part of [Open-o3 Video](https://github.com/marinero4972/Open-o3-Video), and makes extensive use of public video benchmarks such as V-STaR, Video-MME, VideoMMMU, and WorldSense for evaluation.
+
+```bibtex
+@article{meng2025openo3,
+  title={Open-o3 Video: Grounded Video Reasoning with Explicit Spatio-Temporal Evidence},
+  author={Meng, Jiahao and Li, Xiangtai and Wang, Haochen and others},
+  journal={arXiv preprint arXiv:2510.20579},
+  year={2025}
+}
+```
