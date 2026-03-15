@@ -65,10 +65,6 @@ ${DATA_ROOT}/
 
 ---
 
-### 2. Add model weights link to your project `README.md`
-
-In your repo `README.md` (the codebase one), add a short section, for example right after **Core Contribution** or near **Installation**:
-
 ### Pretrained Models
 
 We release several Motion-O variants on Hugging Face:
