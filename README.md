@@ -65,7 +65,7 @@ ${DATA_ROOT}/
 
 ---
 
-### Pretrained Models
+### 2. Pretrained Models
 
 We release several Motion-O variants on Hugging Face:
 
