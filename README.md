@@ -63,7 +63,34 @@ ${DATA_ROOT}/
     ├── gqa/, stgr/, timerft/, etc.
 ```
 
-### 2. Train Baseline (without motion reward)
+---
+
+### 2. Add model weights link to your project `README.md`
+
+In your repo `README.md` (the codebase one), add a short section, for example right after **Core Contribution** or near **Installation**:
+
+### Pretrained Models
+
+We release several Motion-O variants on Hugging Face:
+
+- **Motion-O (no visual grounding)** – main model at repo root  
+  `bishoygaloaa/motion-o`
+
+- **Open-o3 + MCoT (with visual grounding)** – subfolder  
+  `bishoygaloaa/motion-o` with `subfolder="open-o3-mcot"`
+
+- **Open-o3 + MCoT (no visual grounding)** – subfolder  
+  `bishoygaloaa/motion-o` with `subfolder="open-o3-mcot-no-vg"`
+
+Example:
+
+from transformers import AutoModelForCausalLM, AutoProcessor
+
+model = AutoModelForCausalLM.from_pretrained("bishoygaloaa/motion-o")
+processor = AutoProcessor.from_pretrained("bishoygaloaa/motion-o")
+```
+
+### 3. Train Baseline (without motion reward)
 
 ```bash
 # SFT cold-start
@@ -73,18 +100,18 @@ bash scripts/run_sft.sh
 bash scripts/run_grpo_baseline.sh
 ```
 
-### 3. Train with Motion Reward
+### 4. Train with Motion Reward
 
 ```bash
 # RL training with motion-aware trajectory reward
 bash scripts/run_grpo_motion.sh
 ```
 
-### 4. Evaluate
+### 5. Evaluate
 
 All evaluation commands below assume you are in the project root (`vlmm-mcot/`).
 
-#### 4.1 Full evaluation pipeline (V-STaR + Video-MME + VideoMMMU + WorldSense)
+#### 5.1 Full evaluation pipeline (V-STaR + Video-MME + VideoMMMU + WorldSense)
 
 Run the SLURM wrapper on a merged or LoRA checkpoint directory:
 
@@ -99,7 +126,7 @@ This will:
 - Run V-STaR, Video-MME, VideoMMMU, and WorldSense,
 - Write logs/metrics under `logs/` and `evaluation/logs/`.
 
-#### 4.2 V-STaR only (with LLM-as-judge)
+#### 5.2 V-STaR only (with LLM-as-judge)
 
 ```bash
 sbatch scripts/eval_vstar.sh /path/to/checkpoint-dir 100   # optional 2nd arg = max_samples
@@ -110,7 +137,7 @@ This script:
 - Runs V-STaR inference,
 - Runs LLM-as-judge scoring using a large judge model.
 
-#### 4.3 Visualizing V-STaR chains (frames + video per sample)
+#### 5.3 Visualizing V-STaR chains (frames + video per sample)
 
 ```bash
 python evaluation/visualize_results.py \
@@ -127,7 +154,7 @@ Each sample gets:
 - `entry.json` (raw result entry),
 - A copy of the original `.mp4` video.
 
-#### 4.4 Visualizing Video-MME reasoning (correct answers only)
+#### 5.4 Visualizing Video-MME reasoning (correct answers only)
 
 First, run the Video-MME eval (already done in `eval_all_h200.sh`). Then, for any `metrics_*.json`:
 
@@ -276,6 +303,18 @@ motion_reward = 0.5*direction + 0.5*speed
 - Single GPU: Use 4-bit quantization + LoRA
 
 ---
+
+
+## Citation
+
+If you use Motion-O in your work, please cite:
+
+@article{galoaa2026motion,
+  title   = {Motion-Aware Trajectory Reasoning for Video Understanding},
+  author  = {Galoaa, Bishoy and Moezzi, Shayda and Bai, Xiangyu and Ostadabbas, Sarah},
+  journal = {arXiv preprint arXiv:XXXX.XXXXX},
+  year    = {2026}
+}
 
 
 ## License
