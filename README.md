@@ -1,5 +1,7 @@
 # Motion-Aware Trajectory Reasoning for Video Understanding
 
+[![Model on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/bishoygaloaa/motion-o)
+
 **Training VLMs to reason about video motion through verifiable, motion-aware evidence chains with trajectory-level geometric rewards.**
 
 ## Core Contribution
