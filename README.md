@@ -1,10 +1,9 @@
 # Motion-Aware Trajectory Reasoning for Video Understanding
 
+[![Project Page](https://img.shields.io/badge/Project%20Page-motion--o.github.io-blue)](https://ostadabbas.github.io/motion-o.github.io/)
 [![Model on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/bishoygaloaa/motion-o)
 
 **Training VLMs to reason about video motion through verifiable, motion-aware evidence chains with trajectory-level geometric rewards.**
-
-Project page: [https://ostadabbas.github.io/motion-o.github.io/](https://ostadabbas.github.io/motion-o.github.io/)
 
 ## Core Contribution
 
