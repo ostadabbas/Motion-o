@@ -2,6 +2,8 @@
 
 [![Project Page](https://img.shields.io/badge/Project%20Page-motion--o.github.io-blue)](https://ostadabbas.github.io/motion-o.github.io/)
 [![Model on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/bishoygaloaa/motion-o)
+[![arXiv](https://img.shields.io/badge/arXiv-2603.18856-b31b1b.svg)](https://arxiv.org/abs/2603.18856)
+
 
 **Training VLMs to reason about video motion through verifiable, motion-aware evidence chains with trajectory-level geometric rewards.**
 
@@ -310,10 +312,12 @@ If you use Motion-O in your work, please cite:
 
 @article{galoaa2026motion,
   title   = {Motion-Aware Trajectory Reasoning for Video Understanding},
-  author  = {Galoaa, Bishoy and Moezzi, Shayda and Bai, Xiangyu and Ostadabbas, Sarah},
-  journal = {arXiv preprint arXiv:XXXX.XXXXX},
-  year    = {2026}
+  author  = {Galoaa, Bishoy* and Moezzi, Shayda* and Bai, Xiangyu and Ostadabbas, Sarah},
+  journal = {arXiv preprint arXiv:2603.18856},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2603.18856}
 }
+
 
 
 ## License
