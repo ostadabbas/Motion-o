@@ -310,6 +310,7 @@ motion_reward = 0.5*direction + 0.5*speed
 
 If you use Motion-O in your work, please cite:
 
+```bibtex
 @article{galoaa2026motion,
   title   = {Motion-Aware Trajectory Reasoning for Video Understanding},
   author  = {Galoaa, Bishoy* and Moezzi, Shayda* and Bai, Xiangyu and Ostadabbas, Sarah},
@@ -317,6 +318,7 @@ If you use Motion-O in your work, please cite:
   year    = {2026},
   url     = {https://arxiv.org/abs/2603.18856}
 }
+```
 
 
 
