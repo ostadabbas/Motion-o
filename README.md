@@ -1,9 +1,9 @@
-# Motion-Aware Trajectory Reasoning for Video Understanding
+# Motion-o: Trajectory-Grounded Video Reasoning
 
 [![Project Page](https://img.shields.io/badge/Project%20Page-motion--o.github.io-blue)](https://ostadabbas.github.io/motion-o.github.io/)
 [![Model on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/bishoygaloaa/motion-o)
+[![Dataset on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Dataset-yellow)](https://huggingface.co/datasets/bishoygaloaa/Motion-o-MCoT-PLM-motion-keyframes)
 [![arXiv](https://img.shields.io/badge/arXiv-2603.18856-b31b1b.svg)](https://arxiv.org/abs/2603.18856)
-
 
 **Training VLMs to reason about video motion through verifiable, motion-aware evidence chains with trajectory-level geometric rewards.**
 
@@ -72,10 +72,10 @@ ${DATA_ROOT}/
 
 ### 2. Pretrained Models
 
-We release several Motion-O variants on Hugging Face:
+We release several Motion-o variants on Hugging Face:
 
-- **Motion-O (no visual grounding)** – main model at repo root  
-  `bishoygaloaa/motion-o`
+- **Motion-o (no visual grounding)** – main model at repo root  
+  [`bishoygaloaa/motion-o`](https://huggingface.co/bishoygaloaa/motion-o)
 
 - **Open-o3 + MCoT (with visual grounding)** – subfolder  
   `bishoygaloaa/motion-o` with `subfolder="open-o3-mcot"`
@@ -83,8 +83,12 @@ We release several Motion-O variants on Hugging Face:
 - **Open-o3 + MCoT (no visual grounding)** – subfolder  
   `bishoygaloaa/motion-o` with `subfolder="open-o3-mcot-no-vg"`
 
+- **PLM motion keyframes (subset)** – STGR PLM rows with `<motion/>` tags and sharded keyframes  
+  [`bishoygaloaa/Motion-o-MCoT-PLM-motion-keyframes`](https://huggingface.co/datasets/bishoygaloaa/Motion-o-MCoT-PLM-motion-keyframes)
+
 Example:
 
+```python
 from transformers import AutoModelForCausalLM, AutoProcessor
 
 model = AutoModelForCausalLM.from_pretrained("bishoygaloaa/motion-o")
@@ -308,19 +312,17 @@ motion_reward = 0.5*direction + 0.5*speed
 
 ## Citation
 
-If you use Motion-O in your work, please cite:
+If you use Motion-o in your work, please cite:
 
 ```bibtex
 @article{galoaa2026motion,
-  title   = {Motion-Aware Trajectory Reasoning for Video Understanding},
+  title   = {Motion-o: Trajectory-Grounded Video Reasoning},
   author  = {Galoaa, Bishoy* and Moezzi, Shayda* and Bai, Xiangyu and Ostadabbas, Sarah},
   journal = {arXiv preprint arXiv:2603.18856},
   year    = {2026},
   url     = {https://arxiv.org/abs/2603.18856}
 }
 ```
-
-
 
 ## License
 
