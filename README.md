@@ -7,6 +7,8 @@
 
 **Training VLMs to reason about video motion through verifiable, motion-aware evidence chains with trajectory-level geometric rewards.**
 
+See our IO page: https://ostadabbas.github.io/motion-o.github.io/
+
 ## Core Contribution
 
 **Motion-aware trajectory reward** — evaluating not just *where* objects are, but *how they moved*, using geometric motion metrics derived from predicted bbox sequences.
