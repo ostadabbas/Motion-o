@@ -1,5 +1,6 @@
 # Motion-o: Trajectory-Grounded Video Reasoning
 
+[![NeurIPS 2026](https://img.shields.io/badge/NeurIPS-2026-4B3B9A.svg)](https://neurips.cc/)
 [![Project Page](https://img.shields.io/badge/Project%20Page-motion--o.github.io-blue)](https://ostadabbas.github.io/motion-o.github.io/)
 [![Model on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/bishoygaloaa/motion-o)
 [![Dataset on Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Dataset-yellow)](https://huggingface.co/datasets/bishoygaloaa/Motion-o-MCoT-PLM-motion-keyframes)
