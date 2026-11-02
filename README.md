@@ -318,12 +318,11 @@ motion_reward = 0.5*direction + 0.5*speed
 If you use Motion-o in your work, please cite:
 
 ```bibtex
-@article{galoaa2026motion,
+@inproceedings{galoaa2026motion,
   title   = {Motion-o: Trajectory-Grounded Video Reasoning},
   author  = {Galoaa, Bishoy* and Moezzi, Shayda* and Bai, Xiangyu and Ostadabbas, Sarah},
-  journal = {arXiv preprint arXiv:2603.18856},
-  year    = {2026},
-  url     = {https://arxiv.org/abs/2603.18856}
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year    = {2026}
 }
 ```
 
